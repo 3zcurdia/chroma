@@ -21,9 +21,12 @@ In your config file you can setup the following:
 
 ```elixir
 config :chroma, 
-  host: "http://localhost:8000"
+  host: "http://localhost:8000",
+  api_base: "api",
   api_version: "v1"
 ```
+
+By default the config is set to `api/v1`
 
 ## Usage
 
@@ -36,7 +39,10 @@ Chroma.Database.version
 To handle all collection actions, you can use the `Chroma.Collection` module:
 
 ```elixir
-  collection = Chroma.Database.create_collection("my_collection", %{name: "string", age: "int"})
+  {:ok, collection } = Chroma.Collection.create("my_collection", %{name: "string", age: "int"})
+  {:ok, collection } = Chroma.Collection.get_or_create("my_collection", %{name: "string", age: "int"})
+  {:ok, collection } = Chroma.Collection.get("my_collection")
+  Chroma.Collection.delete("my_collection")
 ```
 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
