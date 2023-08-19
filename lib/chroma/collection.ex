@@ -11,17 +11,8 @@ defmodule Chroma.Collection do
   def list do
     "#{Chroma.api_url()}/collections"
     |> Req.get()
-    |> handle_list_response()
+    |> handle_response_list()
   end
-
-  defp handle_list_response({:ok, %Req.Response{status: status, body: body}}) do
-    case status do
-      code when code in 200..299 -> {:ok, Enum.map(body, &Chroma.Collection.new/1)}
-      _ -> {:error, body["error"]}
-    end
-  end
-
-  defp handle_list_response(any), do: any
 
   def get(name) do
     "#{Chroma.api_url()}/collections/#{name}"
@@ -45,31 +36,58 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
-  def delete(%Chroma.Collection{name: name}) do
-    case Req.delete("#{Chroma.api_url()}/collections/#{name}") do
-      {:ok, %Req.Response{status: status, body: body}} ->
-        {:ok, body}
+  def update(_collection, []), do: {:error, "No embeddings provided"}
 
-        case status do
-          code when code in 200..299 -> {:ok, body}
-          _ -> {:error, body["error"]}
-        end
-
-      any ->
-        any
-    end
+  def update(%Chroma.Collection{id: id}, embeddings) when is_list(embeddings) do
+    "#{Chroma.api_url()}/collections/#{id}/update"
+    |> Req.post(json: embeddings)
+    |> handle_json_response()
   end
 
-  # TODO: Review enpoint documentation
-  # def create_index(%Chroma.Collection{id: id}) do
-  #   "#{Chroma.api_url()}/collections/#{id}/create_index"
-  #   |> Req.post()
-  #   # |> handle_response()
-  # end
+  def upsert(_collection, []), do: {:error, "No embeddings provided"}
 
-  def query(%Chroma.Collection{id: id}, embedings, options) do
+  def upsert(%Chroma.Collection{id: id}, embeddings) when is_list(embeddings) do
+    "#{Chroma.api_url()}/collections/#{id}/upsert"
+    |> Req.post(json: embeddings)
+    |> handle_json_response()
+  end
+
+  def count(%Chroma.Collection{id: id}) do
+    "#{Chroma.api_url()}/collections/#{id}/count"
+    |> Req.get()
+    |> handle_json_response()
+  end
+
+  def modify(%Chroma.Collection{} = collection, kwargs) when is_list(kwargs) do
+    args =
+      kwargs
+      |> Enum.reduce(%{}, fn {key, value}, acc -> Map.put(acc, key, value) end)
+
+    modify(collection, args)
+  end
+
+  def modify(%Chroma.Collection{id: id}, args) when is_map(args) do
+    json =
+      %{new_name: args[:name], new_metadata: args[:metadata]}
+      |> Map.filter(fn {_, v} -> v != nil && v != %{} && v != [] end)
+
+    "#{Chroma.api_url()}/collections/#{id}"
+    |> Req.put(json: json)
+    |> handle_json_response()
+  end
+
+  def modify(_any_struct, _any), do: {:error, "Invalid arguments"}
+
+  # TODO: Review enpoint documentation
+  def create_index(%Chroma.Collection{id: id}) do
+    "#{Chroma.api_url()}/collections/#{id}/create_index"
+    |> Req.post()
+    |> handle_json_response()
+  end
+
+  def query(%Chroma.Collection{id: id}, embeddings, options) do
     json = %{
-      query_embeddings: embedings,
+      query_embeddings: embeddings,
       n_results: Map.get(options, :results, 10),
       where: Map.get(options, :where, %{}),
       where_document: Map.get(options, :where_document, %{}),
@@ -78,14 +96,35 @@ defmodule Chroma.Collection do
 
     "#{Chroma.api_url()}/collections/#{id}/query"
     |> Req.post(json: json)
+    |> handle_json_response()
   end
 
-  defp handle_response({:ok, %Req.Response{status: status, body: body}}) do
+  def delete(%Chroma.Collection{name: name}) do
+    "#{Chroma.api_url()}/collections/#{name}"
+    |> Req.delete()
+    |> handle_json_response()
+  end
+
+  defp handle_response_list(response) do
+    case handle_json_response(response) do
+      {:ok, body} -> {:ok, Enum.map(body, &Chroma.Collection.new/1)}
+      any -> any
+    end
+  end
+
+  defp handle_response(response) do
+    case handle_json_response(response) do
+      {:ok, body} -> {:ok, Chroma.Collection.new(body)}
+      any -> any
+    end
+  end
+
+  defp handle_json_response({:ok, %Req.Response{status: status, body: body}}) do
     case status do
-      code when code in 200..299 -> {:ok, Chroma.Collection.new(body)}
+      code when code in 200..299 -> {:ok, body}
       _ -> {:error, body["error"]}
     end
   end
 
-  defp handle_response(any), do: any
+  defp handle_json_response(any), do: any
 end
