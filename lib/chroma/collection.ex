@@ -4,22 +4,44 @@ defmodule Chroma.Collection do
   """
   defstruct id: nil, name: nil, metadata: nil
 
+  @doc """
+  Creates a new `Chroma.Collection` struct.
+
+  Examples:
+
+      iex> Chroma.Collection.new(%{"id" => "123", "name" => "my_collection", "metadata" => %{}})
+      %Chroma.Collection{id: "123", name: "my_collection", metadata: %{}}
+  """
+  @spec new(map) :: %Chroma.Collection{id: any, metadata: any, name: any}
   def new(%{"id" => id, "name" => name, "metadata" => metadata}) do
     %Chroma.Collection{id: id, name: name, metadata: metadata}
   end
 
+  @doc """
+  Lists all collections.
+  """
+  @spec list :: {:error, any} | {:ok, list}
   def list do
     "#{Chroma.api_url()}/collections"
     |> Req.get()
     |> handle_response_list()
   end
 
+  @doc """
+  Gets a collection by name.
+  """
+  @spec get(any) :: {:error, any} | {:ok, %Chroma.Collection{id: any, metadata: any, name: any}}
   def get(name) do
     "#{Chroma.api_url()}/collections/#{name}"
     |> Req.get()
     |> handle_response()
   end
 
+  @doc """
+  Creates a collection.
+  """
+  @spec create(String.t(), map()) ::
+          {:error, any} | {:ok, %Chroma.Collection{id: any, metadata: any, name: any}}
   def create(name, metadata \\ %{}) do
     json = %{name: name, metadata: metadata, get_or_create: false}
 
@@ -28,6 +50,11 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
+  @doc """
+  Gets or create a collection by name.
+  """
+  @spec get_or_create(String.t(), map()) ::
+          {:error, any} | {:ok, %Chroma.Collection{id: any, metadata: any, name: any}}
   def get_or_create(name, metadata \\ %{}) do
     json = %{name: name, metadata: metadata, get_or_create: true}
 
@@ -52,6 +79,10 @@ defmodule Chroma.Collection do
     |> handle_json_response()
   end
 
+  @doc """
+  Counts all embeddings from a collection.
+  """
+  @spec count(%Chroma.Collection{:id => any}) :: {:error, any} | {:ok, any}
   def count(%Chroma.Collection{id: id}) do
     "#{Chroma.api_url()}/collections/#{id}/count"
     |> Req.get()
@@ -78,8 +109,12 @@ defmodule Chroma.Collection do
 
   def modify(_any_struct, _any), do: {:error, "Invalid arguments"}
 
-  # TODO: Review enpoint documentation
+  @doc """
+  Creates an index for a collection.
+  """
+  @spec create_index(%Chroma.Collection{:id => any}) :: {:error, any} | {:ok, any}
   def create_index(%Chroma.Collection{id: id}) do
+    # TODO: Review enpoint documentation
     "#{Chroma.api_url()}/collections/#{id}/create_index"
     |> Req.post()
     |> handle_json_response()
@@ -99,6 +134,10 @@ defmodule Chroma.Collection do
     |> handle_json_response()
   end
 
+  @doc """
+  Deletes a collection by name.
+  """
+  @spec delete(%Chroma.Collection{:name => String.t()}) :: {:error, any} | {:ok, any}
   def delete(%Chroma.Collection{name: name}) do
     "#{Chroma.api_url()}/collections/#{name}"
     |> Req.delete()

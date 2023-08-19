@@ -2,16 +2,29 @@ defmodule Chroma.Database do
   @moduledoc """
   Documentation for `Chroma.Database`
   """
+
+  @doc """
+  Returns the current vesion of the Chroma database.
+  """
   @spec version :: String.t()
   def version, do: Req.get!(Chroma.api_url() <> "/version").body
 
-  @spec reset :: Map.t()
+  @doc """
+  Resets the database to its initial state.
+  """
+  @spec reset :: map()
   def reset, do: Req.post(Chroma.api_url() <> "/reset") |> handle_response()
 
-  @spec persist :: Map.t()
+  @doc """
+  Persists the database to disk.
+  """
+  @spec persist :: map()
   def persist, do: Req.post(Chroma.api_url() <> "/persist") |> handle_response()
 
-  @spec heartbeat :: Map.t()
+  @doc """
+  Returns the current state of the database.
+  """
+  @spec heartbeat :: map()
   def heartbeat, do: Req.get(Chroma.api_url() <> "/heartbeat") |> handle_response()
 
   defp handle_response({:ok, %Req.Response{status: status, body: body}}) do
