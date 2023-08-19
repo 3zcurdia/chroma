@@ -6,8 +6,10 @@ defmodule Chroma.MixProject do
       app: :chroma,
       version: "0.1.0",
       elixir: "~> 1.15",
+      summary: "A Chroma client for Elixir",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package(),
     ]
   end
 
@@ -25,6 +27,14 @@ defmodule Chroma.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30.5", only: :dev, runtime: false},
       {:req, "~> 0.3.11"}
+    ]
+  end
+
+  def package do
+    [
+      maintainers: ["Luis Ezcurdia"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/3zcurdia/chroma"}
     ]
   end
 end

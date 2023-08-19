@@ -1,6 +1,6 @@
 # Chroma
 
-**TODO: Add description**
+A [ChromaDB](https://trychroma.com) client for Elixir.
 
 ## Installation
 
