@@ -12,19 +12,19 @@ defmodule Chroma.Database do
   @doc """
   Resets the database to its initial state.
   """
-  @spec reset :: map()
+  @spec reset :: {:ok, map()} | {:error, any}
   def reset, do: Req.post(Chroma.api_url() <> "/reset") |> handle_response()
 
   @doc """
   Persists the database to disk.
   """
-  @spec persist :: map()
+  @spec persist :: {:ok, map()} | {:error, any}
   def persist, do: Req.post(Chroma.api_url() <> "/persist") |> handle_response()
 
   @doc """
   Returns the current state of the database.
   """
-  @spec heartbeat :: map()
+  @spec heartbeat :: {:ok, map()} | {:error, any}
   def heartbeat, do: Req.get(Chroma.api_url() <> "/heartbeat") |> handle_response()
 
   defp handle_response({:ok, %Req.Response{status: status, body: body}}) do

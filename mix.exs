@@ -9,7 +9,7 @@ defmodule Chroma.MixProject do
       description: "A ChromaDB client for Elixir",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      package: package(),
+      package: package()
     ]
   end
 
@@ -24,9 +24,10 @@ defmodule Chroma.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:req, "~> 0.3.11"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30.5", only: :dev, runtime: false},
-      {:req, "~> 0.3.11"}
+      {:mock, "~> 0.3.8", only: :test}
     ]
   end
 
