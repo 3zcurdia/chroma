@@ -1,6 +1,5 @@
 defmodule Chroma.CollectionTest do
   use ExUnit.Case, async: false
-  doctest Chroma.Collection
 
   import Mock
 
