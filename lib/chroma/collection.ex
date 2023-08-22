@@ -4,15 +4,21 @@ defmodule Chroma.Collection do
   """
   defstruct id: nil, name: nil, metadata: nil
 
-  @spec query(%{:id => any}, any, map) :: {:error, any} | {:ok, any}
-  def query(%Chroma.Collection{id: id}, embeddings, options) do
-    json = %{
-      query_embeddings: embeddings,
-      n_results: Map.get(options, :results, 10),
-      where: Map.get(options, :where, %{}),
-      where_document: Map.get(options, :where_document, %{}),
-      include: Map.get(options, :include, ["metadatas", "documents", "distances"])
-    }
+  def query(%Chroma.Collection{id: id}, kargs) do
+    options =
+      kargs
+      |> Enum.reduce(%{}, fn {key, value}, acc -> Map.put(acc, key, value) end)
+
+    json =
+      %{
+        text_query: Map.get(options, :text_query),
+        query_embeddings: Map.get(options, :query_embeddings),
+        n_results: Map.get(options, :results, 10),
+        where: Map.get(options, :where, %{}),
+        where_document: Map.get(options, :where_document, %{}),
+        include: Map.get(options, :include, ["metadatas", "documents", "distances"])
+      }
+      |> Map.filter(fn {_, v} -> v != nil end)
 
     "#{Chroma.api_url()}/collections/#{id}/query"
     |> Req.post(json: json)
@@ -62,6 +68,12 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
+  def get!(name) do
+    name
+    |> get()
+    |> handle_response!()
+  end
+
   @doc """
   Creates a collection.
 
@@ -78,6 +90,12 @@ defmodule Chroma.Collection do
     "#{Chroma.api_url()}/collections"
     |> Req.post(json: json)
     |> handle_response()
+  end
+
+  def create!(name, metadata \\ %{}) do
+    name
+    |> create(metadata)
+    |> handle_response!()
   end
 
   @doc """
@@ -98,6 +116,12 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
+  def get_or_create!(name, metadata \\ %{}) do
+    name
+    |> get_or_create(metadata)
+    |> handle_response!()
+  end
+
   @doc """
   Adds a batch of embeddings in the database.
   """
@@ -105,7 +129,7 @@ defmodule Chroma.Collection do
   def add(%Chroma.Collection{id: id}, %{} = data) do
     "#{Chroma.api_url()}/collections/#{id}/add"
     |> Req.post(json: data)
-    |> handle_json_response()
+    |> handle_json_response!()
   end
 
   @doc """
@@ -171,7 +195,7 @@ defmodule Chroma.Collection do
   def delete(%Chroma.Collection{name: name}) do
     "#{Chroma.api_url()}/collections/#{name}"
     |> Req.delete()
-    |> handle_json_response()
+    |> handle_json_response!()
   end
 
   @doc """
@@ -184,9 +208,16 @@ defmodule Chroma.Collection do
   """
   @spec count(%{:id => any}) :: {:error, any} | {:ok, any}
   def count(%Chroma.Collection{id: id}) do
-    "#{Chroma.api_url()}/collections/#{id}/count"
-    |> Req.get()
-    |> handle_json_response()
+    case Req.get("#{Chroma.api_url()}/collections/#{id}/count") do
+      {:ok, %Req.Response{status: status, body: body}} ->
+        case status do
+          code when code in 200..299 -> body
+          _ -> 0
+        end
+
+      {:error, _response} ->
+        nil
+    end
   end
 
   defp handle_response_list(response) do
@@ -203,6 +234,13 @@ defmodule Chroma.Collection do
     end
   end
 
+  defp handle_response!(response) do
+    case handle_response(response) do
+      {:ok, body} -> body
+      {:error, body} -> raise body
+    end
+  end
+
   defp handle_json_response({:ok, %Req.Response{status: status, body: body}}) do
     case status do
       code when code in 200..299 -> {:ok, body}
@@ -211,4 +249,11 @@ defmodule Chroma.Collection do
   end
 
   defp handle_json_response(any), do: any
+
+  defp handle_json_response!(any) do
+    case handle_json_response(any) do
+      {:ok, body} -> body
+      {:error, body} -> raise body
+    end
+  end
 end

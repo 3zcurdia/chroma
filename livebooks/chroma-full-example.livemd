@@ -1,0 +1,156 @@
+# ChromaDb Example
+
+```elixir
+Mix.install([
+  {:chroma, path: "/Users/ezcurdia/code/elixir/chroma"},
+  {:explorer, "~> 0.6.1"},
+  {:req, "~> 0.3.11"},
+  {:floki, "~> 0.34.3"}
+])
+```
+
+## Database
+
+To verfiy your client has been configured you can run `api_url` to inspect the default values
+
+```elixir
+Chroma.api_url()
+```
+
+You can easly fetch the current database version
+
+```elixir
+Chroma.Database.version()
+```
+
+The heartbeat it will help you to verify the server is running correctly
+
+```elixir
+Chroma.Database.heartbeat()
+```
+
+## Collection
+
+A collection it allow you to group your embeddings under a common namespace and you could do all CRUD operations
+
+```elixir
+{:ok, collection} =
+  Chroma.Collection.get_or_create("example", %{
+    type: "test",
+    source: "https://example.com"
+  })
+```
+
+```elixir
+Chroma.Collection.modify(collection, metadata: %{b: 2})
+```
+
+```elixir
+Chroma.Collection.list()
+```
+
+```elixir
+Chroma.Collection.delete(collection)
+```
+
+## Embeddings
+
+Let's prepare an example to use embeddings. We need a collection of documents to populate our collection.
+
+In this example we will fetch most of elixir documentation as text documents.
+
+```elixir
+pages = [
+  "Atom",
+  "Base",
+  "Bitwise",
+  "Date",
+  "DateTime",
+  "Exception",
+  "Float",
+  "Function",
+  "Integer",
+  "Module",
+  "NaiveDateTime",
+  "Record",
+  "Regex",
+  "String",
+  "Time",
+  "Tuple",
+  "URI",
+  "Access",
+  "Date.Range",
+  "Enum",
+  "Keyword",
+  "List",
+  "Map",
+  "MapSet",
+  "Range",
+  "Stream"
+]
+```
+
+First we will fetch all pages and parse the content into an array of strings
+
+```elixir
+documents =
+  pages
+  |> Enum.map(fn key -> "https://hexdocs.pm/elixir/1.15.4/#{key}.html" end)
+  |> Task.async_stream(fn url ->
+    res = Req.get!(url)
+
+    res.body
+    |> Floki.parse_document!()
+    |> Floki.find("#content")
+    |> Floki.text()
+  end)
+  |> Stream.map(fn {:ok, txt} ->
+    txt
+    |> String.replace_prefix("SettingsView Source", "")
+    |> String.replace("(Elixir v1.15.4)", ": ", global: false)
+  end)
+  |> Enum.to_list()
+```
+
+Now that we have a list of documents lets prepare some metadata
+
+```elixir
+metadata =
+  pages
+  |> Enum.map(fn page ->
+    %{module: page, source_url: "https://hexdocs.pm/elixir/1.15.4/#{page}.html"}
+  end)
+```
+
+Now that we have our data set ready, lets configure our collection
+
+```elixir
+{:ok, collection} =
+  Chroma.Collection.get_or_create("elixir-lang", %{type: "documentation", style: "technical"})
+
+embeddings = %{
+  documents: documents,
+  metadata: metadata,
+  ids: pages
+}
+
+Chroma.Collection.add(collection, embeddings)
+```
+
+To ensure our collection has been populated you can run a count
+
+```elixir
+Chroma.Collection.count(collection)
+```
+
+Now that our collection has been populated, lets query
+
+```elixir
+Chroma.Collection.query(
+  collection,
+  text_query: "atom",
+  query_embeddings: [],
+  where: %{},
+  where_document: %{"$contains" => "atom"}
+)
+```
