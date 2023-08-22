@@ -1,12 +1,18 @@
-# ChromaDb Example
+# Chroma Example
 
 ```elixir
-Mix.install([
-  {:chroma, path: "/Users/ezcurdia/code/elixir/chroma"},
-  {:explorer, "~> 0.6.1"},
-  {:req, "~> 0.3.11"},
-  {:floki, "~> 0.34.3"}
-])
+Mix.install(
+  [
+    {:chroma, github: "3zcurdia/chroma"},
+    {:explorer, "~> 0.6.1"},
+    {:req, "~> 0.3.11"},
+    {:floki, "~> 0.34.3"},
+    {:kino_bumblebee, "~> 0.3.0"},
+    {:exla, "~> 0.5.1"}
+  ],
+  config: [chroma: [host: "http://localhost:8000", api_base: "api", api_version: "v1"]],
+  config: [nx: [default_backend: EXLA.Backend]]
+)
 ```
 
 ## Database
@@ -90,13 +96,22 @@ pages = [
 ]
 ```
 
+Now that we have a list of keys lets prepare some metadata
+
+```elixir
+metadata =
+  pages
+  |> Enum.map(fn page ->
+    %{module: page, source_url: "https://hexdocs.pm/elixir/1.15.4/#{page}.html"}
+  end)
+```
+
 First we will fetch all pages and parse the content into an array of strings
 
 ```elixir
 documents =
-  pages
-  |> Enum.map(fn key -> "https://hexdocs.pm/elixir/1.15.4/#{key}.html" end)
-  |> Task.async_stream(fn url ->
+  metadata
+  |> Task.async_stream(fn %{source_url: url} ->
     res = Req.get!(url)
 
     res.body
@@ -112,29 +127,20 @@ documents =
   |> Enum.to_list()
 ```
 
-Now that we have a list of documents lets prepare some metadata
-
-```elixir
-metadata =
-  pages
-  |> Enum.map(fn page ->
-    %{module: page, source_url: "https://hexdocs.pm/elixir/1.15.4/#{page}.html"}
-  end)
-```
-
 Now that we have our data set ready, lets configure our collection
 
 ```elixir
-{:ok, collection} =
-  Chroma.Collection.get_or_create("elixir-lang", %{type: "documentation", style: "technical"})
+{:ok, collection} = Chroma.Collection.get_or_create("elixir-lang", %{"hnsw:space" => "cosine"})
 
-embeddings = %{
-  documents: documents,
-  metadata: metadata,
-  ids: pages
-}
-
-Chroma.Collection.add(collection, embeddings)
+Chroma.Collection.add(
+  collection,
+  %{
+    documents: documents,
+    embeddings: [],
+    metadata: metadata,
+    ids: pages
+  }
+)
 ```
 
 To ensure our collection has been populated you can run a count
@@ -148,9 +154,8 @@ Now that our collection has been populated, lets query
 ```elixir
 Chroma.Collection.query(
   collection,
-  text_query: "atom",
-  query_embeddings: [],
-  where: %{},
+  query_embeddings: [[11.1, 12.1, 13.1]],
+  wwhere: %{metadata_field: "is_equal_to_this"},
   where_document: %{"$contains" => "atom"}
 )
 ```

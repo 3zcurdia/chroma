@@ -4,6 +4,19 @@ defmodule Chroma.Collection do
   """
   defstruct id: nil, name: nil, metadata: nil
 
+  @doc """
+  It allows to query the database for similar embeddings.
+
+  Examples:
+
+      iex> Chroma.Collection.query(
+        %Chroma.Collection{id: "123"},
+        query_embeddings: [[11.1, 12.1, 13.1],[1.1, 2.3, 3.2], ...],
+        where: %{"metadata_field": "is_equal_to_this"},
+        where_document: %{"$contains" => "search_string"}
+      )
+      {:ok, [%Chroma.Embedding{embedding: [1, 2, 3], id: "123", metadata: %{}}]}
+  """
   def query(%Chroma.Collection{id: id}, kargs) do
     options =
       kargs
@@ -11,8 +24,7 @@ defmodule Chroma.Collection do
 
     json =
       %{
-        text_query: Map.get(options, :text_query),
-        query_embeddings: Map.get(options, :query_embeddings),
+        query_embeddings: Map.get(options, :query_embeddings, []),
         n_results: Map.get(options, :results, 10),
         where: Map.get(options, :where, %{}),
         where_document: Map.get(options, :where_document, %{}),
@@ -68,6 +80,16 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
+
+  @doc """
+  Gets a collection by name.
+
+  Examples:
+
+      iex> Chroma.Collection.get!("my_collection")
+      %Chroma.Collection{id: "123", name: "my_collection", metadata: %{}}
+  """
+  @spec get!(any) :: %Chroma.Collection{id: any, metadata: any, name: any}
   def get!(name) do
     name
     |> get()
@@ -82,8 +104,7 @@ defmodule Chroma.Collection do
       iex> Chroma.Collection.create("my_collection", metadata: %{type: "test"})
       {:ok, %Chroma.Collection{id: "123", name: "my_collection", metadata: %{type: "test"}}}
   """
-  @spec create(String.t(), map()) ::
-          {:error, any} | {:ok, %{id: any, metadata: any, name: any}}
+  @spec create(String.t(), map()) :: {:error, any} | {:ok, %{id: any, metadata: any, name: any}}
   def create(name, metadata \\ %{}) do
     json = %{name: name, metadata: metadata, get_or_create: false}
 
@@ -92,6 +113,15 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
+  @doc """
+  Creates a collection.
+
+  Examples:
+
+      iex> Chroma.Collection.create!("my_collection", metadata: %{type: "test"})
+      %Chroma.Collection{id: "123", name: "my_collection", metadata: %{type: "test"}}
+  """
+  @spec create!(binary, map) :: %{id: any, metadata: any, name: any}
   def create!(name, metadata \\ %{}) do
     name
     |> create(metadata)
@@ -116,6 +146,15 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
+  @doc """
+  Gets or create a collection by name.
+
+  Examples:
+
+      iex> Chroma.Collection.get_or_create!("my_collection", metadata: %{type: "test"})
+      %Chroma.Collection{id: "123", name: "my_collection", metadata: %{type: "test"}}
+  """
+  @spec get_or_create!(binary, map) :: %{id: any, metadata: any, name: any}
   def get_or_create!(name, metadata \\ %{}) do
     name
     |> get_or_create(metadata)
@@ -158,8 +197,10 @@ defmodule Chroma.Collection do
 
       iex> Chroma.Collection.modify(%Chroma.Collection{id: "123"}, name: "new_name")
       {:ok, %Chroma.Collection{id: "123", name: "new_name", metadata: %{}}}
+
       iex> Chroma.Collection.modify(%Chroma.Collection{id: "123"}, metadata: %{type: "test"})
       {:ok, %Chroma.Collection{id: "123", name: "new_name", metadata: %{type: "test"}}}
+
       iex> Chroma.Collection.modify(%Chroma.Collection{id: "123"}, %{name: "new_name", metadata: %{type: "test"}})
       {:ok, %Chroma.Collection{id: "123", name: "new_name", metadata: %{type: "test"}}}
   """
@@ -189,9 +230,9 @@ defmodule Chroma.Collection do
   Examples:
 
       iex> Chroma.Collection.delete("my_collection")
-      {:ok, nil}
+      nil
   """
-  @spec delete(%{:name => String.t()}) :: {:error, any} | {:ok, any}
+  @spec delete(%{:name => String.t()}) :: any
   def delete(%Chroma.Collection{name: name}) do
     "#{Chroma.api_url()}/collections/#{name}"
     |> Req.delete()
@@ -204,9 +245,9 @@ defmodule Chroma.Collection do
   Examples:
 
       iex> Chroma.Collection.count(%Chroma.Collection{id: "123"})
-      {:ok, 100}
+      100
   """
-  @spec count(%{:id => any}) :: {:error, any} | {:ok, any}
+  @spec count(%{:id => any}) :: any
   def count(%Chroma.Collection{id: id}) do
     case Req.get("#{Chroma.api_url()}/collections/#{id}/count") do
       {:ok, %Req.Response{status: status, body: body}} ->
