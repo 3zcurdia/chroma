@@ -1,6 +1,6 @@
 defmodule Chroma.Database do
   @moduledoc """
-  Documentation for `Chroma.Database`
+  It intereacts with the database basic operations.
   """
 
   @doc """

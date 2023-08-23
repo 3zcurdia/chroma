@@ -9,7 +9,12 @@ defmodule Chroma.MixProject do
       description: "A ChromaDB client for Elixir",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      package: package()
+      package: package(),
+      docs: [
+        # The main page in the docs
+        main: "Chroma",
+        extras: ["README.md"]
+      ]
     ]
   end
 

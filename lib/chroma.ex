@@ -1,11 +1,17 @@
 defmodule Chroma do
   @moduledoc """
-  Documentation for `Chroma` client.
+  Configuration module.
   """
 
+  @doc """
+  It returns the API URL from the configuration.
+  """
   @spec api_url :: String.t()
   def api_url, do: "#{host()}/#{api_base()}/#{api_version()}"
 
+  @doc """
+  It returns the host from the configuration., or the default value (http://localhost:3000).
+  """
   @spec host :: String.t()
   def host do
     case Application.fetch_env(:chroma, :host) do
@@ -14,6 +20,9 @@ defmodule Chroma do
     end
   end
 
+  @doc """
+  It returns the API base from the configuration., or the default value (api).
+  """
   @spec api_base :: String.t()
   def api_base do
     case Application.fetch_env(:chroma, :api_base) do
@@ -22,6 +31,9 @@ defmodule Chroma do
     end
   end
 
+  @doc """
+  It returns the API version from the configuration., or the default value (v1).
+  """
   @spec api_version :: String.t()
   def api_version do
     case Application.fetch_env(:chroma, :api_version) do
@@ -29,10 +41,4 @@ defmodule Chroma do
       _ -> "v1"
     end
   end
-
-  @spec username :: String.t()
-  def username, do: Application.fetch_env!(:chroma, :username)
-
-  @spec password :: String.t()
-  def password, do: Application.fetch_env!(:chroma, :password)
 end

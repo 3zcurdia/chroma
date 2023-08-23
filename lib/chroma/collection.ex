@@ -1,13 +1,21 @@
 defmodule Chroma.Collection do
   @moduledoc """
-  Chroma Collection methods.
+  It intereacts with the collection basic operations.
   """
   defstruct id: nil, name: nil, metadata: nil
+  @type t :: %__MODULE__{id: String.t(), name: String.t(), metadata: map()}
 
   @doc """
   It allows to query the database for similar embeddings.
 
-  Examples:
+  ## Parameters
+
+    - **query_embeddings**: A list of embeddings to query.
+    - **results**: The number of results to return.
+    - **where**: A map of metadata fields to filter by.
+    - **where_document**: A map of document fields to filter by.
+
+  ## Examples
 
       iex> Chroma.Collection.query(
         %Chroma.Collection{id: "123"},
@@ -40,7 +48,7 @@ defmodule Chroma.Collection do
   @doc """
   Creates a new `Chroma.Collection` struct.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.new(%{"id" => "123", "name" => "my_collection", "metadata" => %{}})
       %Chroma.Collection{id: "123", name: "my_collection", metadata: %{}}
@@ -53,7 +61,7 @@ defmodule Chroma.Collection do
   @doc """
   Lists all collections.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.list()
       {:ok, [%Chroma.Collection{id: "123", name: "my_collection", metadata: %{}}]}
@@ -68,7 +76,7 @@ defmodule Chroma.Collection do
   @doc """
   Gets a collection by name.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.get("my_collection")
       {:ok, %Chroma.Collection{id: "123", name: "my_collection", metadata: %{}}}
@@ -80,16 +88,15 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
-
   @doc """
   Gets a collection by name.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.get!("my_collection")
       %Chroma.Collection{id: "123", name: "my_collection", metadata: %{}}
   """
-  @spec get!(any) :: %Chroma.Collection{id: any, metadata: any, name: any}
+  @spec get!(any) :: %{id: any, metadata: any, name: any}
   def get!(name) do
     name
     |> get()
@@ -99,7 +106,7 @@ defmodule Chroma.Collection do
   @doc """
   Creates a collection.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.create("my_collection", metadata: %{type: "test"})
       {:ok, %Chroma.Collection{id: "123", name: "my_collection", metadata: %{type: "test"}}}
@@ -116,7 +123,7 @@ defmodule Chroma.Collection do
   @doc """
   Creates a collection.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.create!("my_collection", metadata: %{type: "test"})
       %Chroma.Collection{id: "123", name: "my_collection", metadata: %{type: "test"}}
@@ -131,7 +138,7 @@ defmodule Chroma.Collection do
   @doc """
   Gets or create a collection by name.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.get_or_create("my_collection", metadata: %{type: "test"})
       {:ok, %Chroma.Collection{id: "123", name: "my_collection", metadata: %{type: "test"})}}
@@ -149,7 +156,7 @@ defmodule Chroma.Collection do
   @doc """
   Gets or create a collection by name.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.get_or_create!("my_collection", metadata: %{type: "test"})
       %Chroma.Collection{id: "123", name: "my_collection", metadata: %{type: "test"}}
@@ -193,7 +200,7 @@ defmodule Chroma.Collection do
   @doc """
   It updates the name and metadata of a collection.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.modify(%Chroma.Collection{id: "123"}, name: "new_name")
       {:ok, %Chroma.Collection{id: "123", name: "new_name", metadata: %{}}}
@@ -227,7 +234,7 @@ defmodule Chroma.Collection do
   @doc """
   Deletes a collection by name.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.delete("my_collection")
       nil
@@ -242,7 +249,7 @@ defmodule Chroma.Collection do
   @doc """
   Counts all embeddings from a collection.
 
-  Examples:
+  ## Examples
 
       iex> Chroma.Collection.count(%Chroma.Collection{id: "123"})
       100
