@@ -4,11 +4,10 @@
 Mix.install(
   [
     {:chroma, github: "3zcurdia/chroma"},
-    {:explorer, "~> 0.6.1"},
     {:req, "~> 0.3.11"},
     {:floki, "~> 0.34.3"},
-    {:kino_bumblebee, "~> 0.3.0"},
-    {:exla, "~> 0.5.1"}
+    {:bumblebee, "~> 0.3.1"},
+    {:exla, "~> 0.6.0"}
   ],
   config: [chroma: [host: "http://localhost:8000", api_base: "api", api_version: "v1"]],
   config: [nx: [default_backend: EXLA.Backend]]
@@ -127,7 +126,29 @@ documents =
   |> Enum.to_list()
 ```
 
-Now that we have our data set ready, lets configure our collection
+To generate the embedding tensor for each document, we will setup bumblebee
+
+```elixir
+{:ok, model_info} = Bumblebee.load_model({:hf, "intfloat/e5-large-v2"})
+{:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "intfloat/e5-large-v2"})
+
+serving =
+  Bumblebee.Text.TextEmbedding.text_embedding(model_info, tokenizer,
+    compile: [batch_size: 8, sequence_length: 100],
+    defn_options: [compiler: EXLA]
+  )
+```
+
+Now that we loaded and configured our model, we could generate their embeddings
+
+```elixir
+embeddings =
+  documents
+  |> Enum.map(fn doc -> Nx.Serving.run(serving, doc) end)
+  |> Enum.map(fn %{embedding: embedding} -> Nx.to_list(embedding) end)
+```
+
+Now that we have everything ready, lets add the embeddings to our collection
 
 ```elixir
 {:ok, collection} = Chroma.Collection.get_or_create("elixir-lang", %{"hnsw:space" => "cosine"})
@@ -136,7 +157,7 @@ Chroma.Collection.add(
   collection,
   %{
     documents: documents,
-    embeddings: [],
+    embeddings: embeddings,
     metadata: metadata,
     ids: pages
   }
@@ -152,10 +173,15 @@ Chroma.Collection.count(collection)
 Now that our collection has been populated, lets query
 
 ```elixir
-Chroma.Collection.query(
-  collection,
-  query_embeddings: [[11.1, 12.1, 13.1]],
-  wwhere: %{metadata_field: "is_equal_to_this"},
-  where_document: %{"$contains" => "atom"}
-)
+%{embedding: tensor_embeddings} = Nx.Serving.run(serving, "what is an atom?")
+query_embeddings = tensor_embeddings |> Nx.to_list()
+```
+
+```elixir
+{:ok, result} =
+  Chroma.Collection.query(
+    collection,
+    results: 3,
+    query_embeddings: [query_embeddings]
+  )
 ```
