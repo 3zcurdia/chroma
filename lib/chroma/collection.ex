@@ -1,6 +1,6 @@
 defmodule Chroma.Collection do
   @moduledoc """
-  It intereacts with the collection basic operations.
+  Basic operations to intereact with collections.
   """
   defstruct id: nil, name: nil, metadata: nil
   @type t :: %__MODULE__{id: String.t(), name: String.t(), metadata: map()}

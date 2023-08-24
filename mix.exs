@@ -11,9 +11,8 @@ defmodule Chroma.MixProject do
       deps: deps(),
       package: package(),
       docs: [
-        # The main page in the docs
-        main: "Chroma",
-        extras: ["README.md"]
+        main: "README",
+        extras: ["README.md", "LICENSE"]
       ]
     ]
   end

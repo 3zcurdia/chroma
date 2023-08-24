@@ -1,6 +1,6 @@
 defmodule Chroma.Database do
   @moduledoc """
-  It intereacts with the database basic operations.
+  Basic operations to intereact with the database.
   """
 
   @doc """

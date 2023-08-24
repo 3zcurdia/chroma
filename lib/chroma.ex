@@ -1,6 +1,6 @@
 defmodule Chroma do
   @moduledoc """
-  Configuration module.
+  A ChromaDB client for Elixir
   """
 
   @doc """
