@@ -1,0 +1,29 @@
+# Text Embedding
+
+```elixir
+Mix.install(
+  [
+    {:bumblebee, "~> 0.3.1"},
+    {:exla, "~> 0.6.0"}
+  ],
+  config: [nx: [default_backend: EXLA.Backend]]
+)
+```
+
+## Section
+
+```elixir
+{:ok, model_info} = Bumblebee.load_model({:hf, "intfloat/e5-small-v2"})
+{:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "intfloat/e5-small-v2"})
+
+serving =
+  Bumblebee.Text.TextEmbedding.text_embedding(model_info, tokenizer,
+    compile: [batch_size: 1, sequence_length: 100],
+    defn_options: [compiler: EXLA]
+  )
+```
+
+```elixir
+text = "Here is some text to calculate embedding"
+%{embedding: embedding} = Nx.Serving.run(serving, text)
+```

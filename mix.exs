@@ -4,7 +4,7 @@ defmodule Chroma.MixProject do
   def project do
     [
       app: :chroma,
-      version: "0.1.0",
+      version: "0.1.2",
       elixir: "~> 1.15",
       description: "A ChromaDB client for Elixir",
       start_permanent: Mix.env() == :prod,
