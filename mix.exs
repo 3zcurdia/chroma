@@ -30,7 +30,7 @@ defmodule Chroma.MixProject do
     [
       {:req, "~> 0.4.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.31.0", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.32.1", only: :dev, runtime: false},
       {:mock, "~> 0.3.8", only: :test}
     ]
   end
