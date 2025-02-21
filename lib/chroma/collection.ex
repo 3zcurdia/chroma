@@ -39,7 +39,7 @@ defmodule Chroma.Collection do
         where_document: Map.get(options, :where_document, %{}),
         include: Map.get(options, :include, ["metadatas", "documents", "distances"])
       }
-      |> Map.filter(fn {_, v} -> v != nil end)
+      |> Map.filter(fn {_, v} -> v != nil and v != %{} end)
 
     "#{Chroma.api_url()}/collections/#{id}/query"
     |> Req.post(json: json)
