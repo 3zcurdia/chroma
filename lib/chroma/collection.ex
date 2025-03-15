@@ -27,19 +27,15 @@ defmodule Chroma.Collection do
       {:ok, [%Chroma.Embedding{embedding: [1, 2, 3], id: "123", metadata: %{}}]}
   """
   def query(%Chroma.Collection{id: id}, kargs) do
-    options =
+    # might be more consistent to rename the argument to n_results
+    {results, map} =
       kargs
-      |> Enum.reduce(%{}, fn {key, value}, acc -> Map.put(acc, key, value) end)
+      |> Enum.into(%{})
+      |> Map.put_new(:include, ["metadatas", "documents", "distances"])
+      |> Map.put_new(:results, 10)
+      |> Map.pop(:results)
 
-    json =
-      %{
-        query_embeddings: Map.get(options, :query_embeddings, []),
-        n_results: Map.get(options, :results, 10),
-        where: Map.get(options, :where, %{}),
-        where_document: Map.get(options, :where_document, %{}),
-        include: Map.get(options, :include, ["metadatas", "documents", "distances"])
-      }
-      |> Map.filter(fn {_, v} -> v != nil and v != %{} end)
+    Map.put(map, :n_results, results)
 
     "#{Chroma.api_url()}/collections/#{id}/query"
     |> Req.post(json: json)
