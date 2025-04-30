@@ -302,16 +302,24 @@ defmodule Chroma.Collection do
     |> handle_response!()
   end
 
-  # --- Add Embeddings ---
-  # Requires a V2 collection struct
+  @doc """
+  Adds a batch of embeddings to the specified collection (V1 endpoint).
+  """
+  @spec add(id :: String.t(), data :: map()) :: {:error, any()} | {:ok, any()}
+  def add(id, %{} = data) when is_binary(id) do
+    url = "#{Chroma.api_url()}/collections/#{id}/add"
+
+    url
+    |> Req.post(json: data)
+    |> handle_json_response()
+  end
+
   @doc """
   Adds a batch of embeddings to the specified collection (V2 endpoint).
-
-  Requires a `Chroma.Collection` struct with non-nil `tenant`, `database`, and `id`.
   """
-  @spec add(t(), map()) :: {:error, any()} | {:ok, any()}
-  def add(%__MODULE__{tenant: tenant, database: database, id: id}, %{} = data)
-      # Guards ensure V2 struct
+  @spec add(tenant :: String.t(), database :: String.t(), id :: String.t(), data :: map()) ::
+          {:error, any()} | {:ok, any()}
+  def add(tenant, database, id, %{} = data)
       when is_binary(tenant) and is_binary(database) and is_binary(id) do
     url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
 
