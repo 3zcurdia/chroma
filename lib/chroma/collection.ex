@@ -1051,16 +1051,16 @@ defmodule Chroma.Collection do
     case handle_json_response(req_result) do
       {:ok, body_map} when is_map(body_map) ->
         try do
-          {:ok, new(body_map)}
+          new(body_map)
         rescue
           e in ArgumentError -> {:error, "Failed to parse collection: #{inspect(e)}"}
         end
 
       {:ok, non_map_body} ->
-        {:error, "API Error: Expected a map, got: #{inspect(non_map_body)}"}
+        "API Error: Expected a map, got: #{inspect(non_map_body)}"
 
       {:error, reason} ->
-        {:error, reason}
+        reason
     end
   end
 
