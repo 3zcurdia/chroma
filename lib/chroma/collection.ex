@@ -12,11 +12,18 @@ defmodule Chroma.Collection do
   """
 
   # Removed default values for tenant and database
-  defstruct tenant: nil,
-            database: nil,
-            id: nil,
-            name: nil,
-            metadata: nil
+
+  defstruct [
+    :id,
+    :name,
+    :metadata,
+    :tenant,
+    :database,
+    :configuration_json,
+    :dimension,
+    :log_position,
+    :version
+  ]
 
   # Updated type definition to allow nil for tenant/database
   @type t :: %__MODULE__{
@@ -175,7 +182,11 @@ defmodule Chroma.Collection do
         "database" => database,
         "id" => id,
         "name" => name,
-        "metadata" => metadata
+        "metadata" => metadata,
+        "configuration_json" => configuration_json,
+        "dimension" => dimension,
+        "log_position" => log_position,
+        "version" => version
       })
       when is_binary(tenant) and is_binary(database) and is_binary(id) and is_binary(name) and
              is_map(metadata) do
@@ -185,14 +196,29 @@ defmodule Chroma.Collection do
        database: database,
        id: id,
        name: name,
-       metadata: metadata
+       metadata: metadata,
+       configuration_json: configuration_json,
+       dimension: dimension,
+       log_position: log_position,
+       version: version
      }}
   end
 
   def new(%{"id" => id, "name" => name, "metadata" => metadata})
       when is_binary(id) and is_binary(name) and is_map(metadata) do
     # Set tenant and database to nil for v1
-    {:ok, %Chroma.Collection{tenant: nil, database: nil, id: id, name: name, metadata: metadata}}
+    {:ok,
+     %Chroma.Collection{
+       tenant: nil,
+       database: nil,
+       id: id,
+       name: name,
+       metadata: metadata,
+       configuration_json: nil,
+       dimension: nil,
+       log_position: nil,
+       version: nil
+     }}
   end
 
   def new(attrs) when is_map(attrs) do
