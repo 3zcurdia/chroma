@@ -424,6 +424,8 @@ defmodule Chroma.Collection do
     json = %{name: name, metadata: metadata, get_or_create: true}
     url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
 
+    IO.inspect(json, label: "JSON Payload for Collection Creation")
+
     url
     |> Req.post(json: json)
     |> handle_response()
