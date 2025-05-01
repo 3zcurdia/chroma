@@ -478,10 +478,10 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
-  def get_or_create(tenant, database, name, metadata) do
-    {:error,
-     "Invalid tenant, database, name, or metadata provided for get_or_create/4. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
-  end
+  def get_or_create(tenant, database, name, metadata),
+    do:
+      {:error,
+       "Invalid tenant, database, name, or metadata provided for get_or_create/4. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
 
   def get_or_create(name, metadata \\ %{})
 
@@ -496,10 +496,10 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
-  def get_or_create(name, metadata) do
-    {:error,
-     "Invalid collection name or metadata provided for get_or_create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
-  end
+  def get_or_create(name, metadata),
+    do:
+      {:error,
+       "Invalid collection name or metadata provided for get_or_create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
 
   # Assuming handle_json_response! returns any
   @spec add(Chroma.Collection.t(), map()) :: any()
@@ -575,135 +575,426 @@ defmodule Chroma.Collection do
     |> handle_json_response!()
   end
 
-  def add(%Chroma.Collection{} = collection, data) do
-    {:error,
-     "Invalid Chroma.Collection struct or data map provided for add/2. Ensure collection has a non-empty id (and tenant/database for v2) and data is a map. Got: collection=#{inspect(collection)}, data=#{inspect(data)}"}
-  end
+  def add(%Chroma.Collection{} = collection, data),
+    do:
+      {:error,
+       "Invalid Chroma.Collection struct or data map provided for add/2. Ensure collection has a non-empty id (and tenant/database for v2) and data is a map. Got: collection=#{inspect(collection)}, data=#{inspect(data)}"}
 
-  def add(other, data) do
-    {:error,
-     "Invalid first argument for add. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
-  end
+  def add(other, data),
+    do:
+      {:error,
+       "Invalid first argument for add. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
 
-  # --- Update Embeddings ---
-  # Requires a V2 collection struct
+  # Assuming handle_json_response returns {:ok, body} or {:error, reason}
+  @spec update(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
   @doc """
-  Updates a batch of embeddings in the specified collection (V2 endpoint).
+  Updates a batch of embeddings, documents, and/or metadata in a collection.
 
-  Requires a `Chroma.Collection` struct with non-nil `tenant`, `database`, and `id`.
+  This function supports both v1 and v2 API endpoints based on the provided
+  Chroma.Collection struct.
+
+  ## Parameters
+
+    - **collection**: The Chroma.Collection struct representing the target collection.
+      For v2, this struct must have non-empty `tenant`, `database`, and `id`.
+      For v1, this struct must have a non-empty `id`.
+    - **data**: A map containing the data to update. This map should include at least one
+      of the following keys: `:embeddings`, `:documents`, `:ids`, `:metadatas`, `:uris`.
+      The `:ids` key is typically required to identify which items to update.
+
+      Example data map:
+      %{
+        ids: ["id1", "id2"],
+        embeddings: [[10.1, 11.1, 12.1], [13.1, 14.1, 15.1]], # Update embeddings for id1 and id2
+        metadatas: [%{status: "processed"}, %{status: "processed"}] # Update metadata for id1 and id2
+      }
+
+  ## Returns
+
+    - `{:ok, any()}` if the update is successful. The exact content of `any()`
+      depends on the Chroma API response and the `handle_json_response/1` helper.
+    - `{:error, any()}` if the update fails or invalid inputs are provided.
+
+  ## Examples
+
+      # Assuming you have a v1 or v2 collection struct and a data map for update
+      iex> v1_collection = %Chroma.Collection{id: "v1_coll_id"}
+      iex> v2_collection = %Chroma.Collection{tenant: "t", database: "d", id: "v2_coll_id"}
+      iex> data_to_update = %{
+      ...>   ids: ["existing_id_1"],
+      ...>   documents: ["updated document content"]
+      ...> }
+      iex> # Assuming handle_json_response is defined
+      iex> # Chroma.Collection.update(v1_collection, data_to_update)
+      # Expected to call v1 API endpoint and return {:ok, ...} or {:error, ...}
+
+      iex> # Chroma.Collection.update(v2_collection, data_to_update)
+      # Expected to call v2 API endpoint and return {:ok, ...} or {:error, ...}
+
+      iex> # Invalid collection struct
+      iex> # Chroma.Collection.update(%Chroma.Collection{}, data_to_update)
+      # Expected to return {:error, "Invalid Chroma.Collection struct..."}
+
   """
-  @spec update(t(), map()) :: {:error, any()} | {:ok, any()}
-  def update(%__MODULE__{tenant: tenant, database: database, id: id}, %{} = data)
-      # Guards ensure V2 struct
-      when is_binary(tenant) and is_binary(database) and is_binary(id) do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/update"
+
+  def update(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    url =
+      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/update"
 
     url
     |> Req.post(json: data)
     |> handle_json_response()
   end
 
-  # --- Upsert Embeddings ---
-  # Requires a V2 collection struct
-  @doc """
-  Upserts embeddings in the specified collection (V2 endpoint).
+  def update(%Chroma.Collection{id: id}, %{} = data)
+      when is_binary(id) and id != "" do
+    IO.puts("Using v1 API for updating data in collection '#{id}'.")
 
-  Requires a `Chroma.Collection` struct with non-nil `tenant`, `database`, and `id`.
-  """
-  @spec upsert(t(), map()) :: {:error, any()} | {:ok, any()}
-  def upsert(%__MODULE__{tenant: tenant, database: database, id: id}, data)
-      # Guards ensure V2 struct
-      when is_binary(tenant) and is_binary(database) and is_binary(id) and is_map(data) do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/upsert"
+    url = "#{Chroma.api_url()}/collections/#{id}/update"
 
     url
     |> Req.post(json: data)
     |> handle_json_response()
   end
 
-  # --- Modify Collection (Name/Metadata) ---
-  # Requires a V2 collection struct
-  @doc """
-  Updates the name and/or metadata of a collection (V2 endpoint).
+  def update(%Chroma.Collection{} = collection, data),
+    do:
+      {:error,
+       "Invalid Chroma.Collection struct or data map provided for update/2. Ensure collection has a non-empty id (and tenant/database for v2) and data is a map. Got: collection=#{inspect(collection)}, data=#{inspect(data)}"}
 
-  Requires a `Chroma.Collection` struct with non-nil `tenant`, `database`, and `id`.
+  def update(other, data),
+    do:
+      {:error,
+       "Invalid first argument for update. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
+
+  @spec upsert(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
+  @doc """
+  Upserts a batch of embeddings, documents, and/or metadata in a collection.
+
+  This function supports both v1 and v2 API endpoints based on the provided
+  Chroma.Collection struct. Upsert means that if an item with a given ID
+  exists, it will be updated; otherwise, it will be created.
+
+  ## Parameters
+
+    - **collection**: The Chroma.Collection struct representing the target collection.
+      For v2, this struct must have non-empty `tenant`, `database`, and `id`.
+      For v1, this struct must have a non-empty `id`.
+    - **data**: A map containing the data to upsert. This map should include at least one
+      of the following keys: `:embeddings`, `:documents`, `:ids`, `:metadatas`, `:uris`.
+      The `:ids` key is typically required.
+
+      Example data map:
+      %{
+        ids: ["id1", "id2"],
+        embeddings: [[10.1, 11.1, 12.1], [13.1, 14.1, 15.1]], # Upsert embeddings for id1 and id2
+        documents: ["doc1 content", "doc2 content"], # Upsert documents for id1 and id2
+        metadatas: [%{status: "processed"}, %{status: "processed"}] # Upsert metadata for id1 and id2
+      }
+
+  ## Returns
+
+    - `{:ok, any()}` if the upsert is successful. The exact content of `any()`
+      depends on the Chroma API response and the `handle_json_response/1` helper.
+    - `{:error, any()}` if the upsert fails or invalid inputs are provided.
+
+  ## Examples
+
+      # Assuming you have a v1 or v2 collection struct and a data map for upsert
+      iex> v1_collection = %Chroma.Collection{id: "v1_coll_id"}
+      iex> v2_collection = %Chroma.Collection{tenant: "t", database: "d", id: "v2_coll_id"}
+      iex> data_to_upsert = %{
+      ...>   ids: ["new_id_1", "existing_id_2"],
+      ...>   documents: ["new document content", "updated document content"]
+      ...> }
+      iex> # Assuming handle_json_response is defined
+      iex> # Chroma.Collection.upsert(v1_collection, data_to_upsert)
+      # Expected to call v1 API endpoint and return {:ok, ...} or {:error, ...}
+
+      iex> # Chroma.Collection.upsert(v2_collection, data_to_upsert)
+      # Expected to call v2 API endpoint and return {:ok, ...} or {:error, ...}
+
+      iex> # Invalid collection struct
+      iex> # Chroma.Collection.upsert(%Chroma.Collection{}, data_to_upsert)
+      # Expected to return {:error, "Invalid Chroma.Collection struct..."}
+
   """
-  @spec modify(t(), keyword() | map()) :: {:error, any()} | {:ok, any()}
-  def modify(%__MODULE__{} = collection, updates) when is_list(updates) do
-    # Delegate keyword list to map clause
-    args = Enum.into(updates, %{})
+  def upsert(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    url =
+      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/upsert"
+
+    url
+    |> Req.post(json: data)
+    |> handle_json_response()
+  end
+
+  def upsert(%Chroma.Collection{id: id}, %{} = data)
+      when is_binary(id) and id != "" do
+    IO.puts("Using v1 API for upserting data in collection '#{id}'.")
+    url = "#{Chroma.api_url()}/collections/#{id}/upsert"
+
+    url
+    |> Req.post(json: data)
+    |> handle_json_response()
+  end
+
+  def upsert(%Chroma.Collection{} = collection, data),
+    do:
+      {:error,
+       "Invalid Chroma.Collection struct or data map provided for upsert/2. Ensure collection has a non-empty id (and tenant/database for v2) and data is a map. Got: collection=#{inspect(collection)}, data=#{inspect(data)}"}
+
+  def upsert(other, data),
+    do:
+      {:error,
+       "Invalid first argument for upsert. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
+
+  @spec modify(Chroma.Collection.t(), maybe_improper_list | map()) ::
+          {:error, any()} | {:ok, any()}
+  @doc """
+  Updates the name and/or metadata of a collection.
+
+  This function supports both v1 and v2 API endpoints based on the provided
+  Chroma.Collection struct.
+
+  ## Parameters
+
+    - **collection**: The Chroma.Collection struct representing the target collection.
+      For v2, this struct must have non-empty `tenant`, `database`, and `id`.
+      For v1, this struct must have a non-empty `id`.
+    - **data**: A map or keyword list containing the data to update.
+      Supported keys are `:new_name` (string) and `:new_metadata` (map).
+      At least one of these keys should be present.
+
+      Example data map/keyword list:
+      `%{new_name: "updated_name", new_metadata: %{status: "active"}}`
+      `[new_name: "updated_name"]`
+
+  ## Returns
+
+    - `{:ok, any()}` if the update is successful. The exact content of `any()`
+      depends on the Chroma API response and the `handle_json_response/1` helper.
+    - `{:error, any()}` if the update fails or invalid inputs are provided.
+
+  ## Examples
+
+      # Assuming you have a v1 or v2 collection struct and data for modification
+      iex> v1_collection = %Chroma.Collection{id: "v1_coll_id"}
+      iex> v2_collection = %Chroma.Collection{tenant: "t", database: "d", id: "v2_coll_id"}
+      iex> data_to_modify = %{new_name: "renamed_collection", new_metadata: %{version: "2"}}
+      iex> # Assuming handle_json_response is defined
+      iex> # Chroma.Collection.modify(v1_collection, data_to_modify)
+      # Expected to call v1 API endpoint and return {:ok, ...} or {:error, ...}
+
+      iex> # Chroma.Collection.modify(v2_collection, data_to_modify)
+      # Expected to call v2 API endpoint and return {:ok, ...} or {:error, ...}
+
+      iex> # Invalid collection struct
+      iex> # Chroma.Collection.modify(%Chroma.Collection{}, data_to_modify)
+      # Expected to return {:error, "Invalid Chroma.Collection struct..."}
+
+      iex> # Invalid data input
+      iex> # Chroma.Collection.modify(v1_collection, "not a map or list")
+      # Expected to return {:error, "Invalid data map or keyword list..."}
+
+  """
+
+  def modify(%Chroma.Collection{} = collection, kwargs) when is_list(kwargs) do
+    args =
+      kwargs
+      |> Enum.into(%{})
+
     modify(collection, args)
   end
 
-  def modify(%__MODULE__{tenant: tenant, database: database, id: id}, updates)
-      # Guards ensure V2 struct
-      when is_binary(tenant) and is_binary(database) and is_binary(id) and is_map(updates) do
-    # Prepare JSON payload
-    json_payload =
-      %{new_name: updates[:name], new_metadata: updates[:metadata]}
-      |> Map.filter(fn {_, v} -> not is_nil(v) and v != %{} end)
+  def modify(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = args)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    json =
+      %{new_name: args[:new_name], new_metadata: args[:new_metadata]}
+      |> Map.filter(fn {_, v} -> v != nil and v != %{} and v != [] end)
 
-    # Only send request if there's something to update
-    if map_size(json_payload) > 0 do
-      url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
+    if map_size(json) == 0 do
+      {:error, "No valid update fields (:new_name or :new_metadata) provided in the data map."}
+    else
+      url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
       url
-      |> Req.put(json: json_payload)
+      |> Req.put(json: json)
       |> handle_json_response()
-    else
-      # Nothing to update
-      {:ok, nil}
     end
   end
 
-  # --- Delete Collection ---
-  # Requires a V2 collection struct
-  @doc """
-  Deletes a collection (V2 endpoint).
+  def modify(%Chroma.Collection{id: id}, %{} = args)
+      when is_binary(id) and id != "" do
+    json =
+      %{new_name: args[:new_name], new_metadata: args[:new_metadata]}
+      |> Map.filter(fn {_, v} -> v != nil and v != %{} and v != [] end)
 
-  Requires a `Chroma.Collection` struct with non-nil `tenant`, `database`, and `name`.
+    if map_size(json) == 0 do
+      {:error, "No valid update fields (:new_name or :new_metadata) provided in the data map."}
+    else
+      url = "#{Chroma.api_url()}/collections/#{id}"
+
+      url
+      |> Req.put(json: json)
+      |> handle_json_response()
+    end
+  end
+
+  def modify(%Chroma.Collection{} = collection, data) when is_map(data),
+    do:
+      {:error,
+       "Invalid Chroma.Collection struct provided for modify/2. Ensure collection has a non-empty id (and tenant/database for v2). Got: collection=#{inspect(collection)}"}
+
+  def modify(other, data),
+    do:
+      {:error,
+       "Invalid arguments for modify. Expected Chroma.Collection struct and a map or keyword list. Got: collection=#{inspect(other)}, data=#{inspect(data)}"}
+
+  @spec delete(Chroma.Collection.t()) :: any()
+  @doc """
+  Deletes a collection.
+
+  This function supports both v1 and v2 API endpoints based on the provided
+  Chroma.Collection struct.
+
+  ## Parameters
+
+    - **collection**: The Chroma.Collection struct representing the target collection.
+      For v2, this struct must have non-empty `tenant`, `database`, and `id`.
+      For v1, this struct must have a non-empty `name`.
+
+  ## Returns
+
+    The result of the underlying HTTP request handling, typically `nil` on success
+    for the `handle_json_response!/1` helper, or raises an error on failure.
+
+  ## Examples
+
+      # Assuming you have a v1 or v2 collection struct
+      iex> v1_collection = %Chroma.Collection{name: "v1_coll_name"}
+      iex> v2_collection = %Chroma.Collection{tenant: "t", database: "d", id: "v2_coll_id"}
+      iex> # Assuming handle_json_response! is defined
+      iex> # Chroma.Collection.delete(v1_collection)
+      # Expected to call v1 API endpoint and return nil or raise
+
+      iex> # Chroma.Collection.delete(v2_collection)
+      # Expected to call v2 API endpoint and return nil or raise
+
+      iex> # Invalid collection struct
+      iex> # Chroma.Collection.delete(%Chroma.Collection{})
+      # Expected to return {:error, "Invalid Chroma.Collection struct..."}
+
   """
-  @spec delete(t()) :: {:error, any()} | {:ok, any()} | no_return()
-  def delete(%__MODULE__{tenant: tenant, database: database, name: name})
-      # Guards ensure V2 struct
-      when is_binary(tenant) and is_binary(database) and is_binary(name) do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}"
+
+  def delete(%Chroma.Collection{tenant: tenant, database: database, id: id})
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
     url
     |> Req.delete()
-    # Use bang version for delete
     |> handle_json_response!()
   end
 
-  @doc """
-  Counts all embeddings in the specified collection (V2 endpoint).
+  def delete(%Chroma.Collection{name: name})
+      when is_binary(name) and name != "" do
+    url = "#{Chroma.api_url()}/collections/#{name}"
 
-  Requires a `Chroma.Collection` struct with non-nil `tenant`, `database`, and `id`.
-  """
-  @spec count(t()) :: {:error, any()} | {:ok, integer()}
-  def count(%__MODULE__{tenant: tenant, database: database, id: id})
-      # Guards ensure V2 struct
-      when is_binary(tenant) and is_binary(database) and is_binary(id) do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/count"
-
-    case Req.get(url) do
-      {:ok, %Req.Response{status: status, body: count_value}} when status in 200..299 ->
-        if is_integer(count_value), do: {:ok, count_value}, else: {:error, "Invalid count value"}
-
-      {:ok, %Req.Response{status: status, body: error_body}} ->
-        {:error, "API Error (Status: #{status}): #{inspect(error_body)}"}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    url
+    |> Req.delete()
+    |> handle_json_response!()
   end
+
+  def delete(%Chroma.Collection{} = collection),
+    do:
+      {:error,
+       "Invalid Chroma.Collection struct provided for delete/1. Ensure collection has a non-empty name (for v1) or non-empty tenant, database, and id (for v2). Got: #{inspect(collection)}"}
+
+  def delete(other),
+    do:
+      {:error,
+       "Invalid first argument for delete. Expected Chroma.Collection struct, got: #{inspect(other)}"}
+
+  @spec count(Chroma.Collection.t()) :: any()
+  @doc """
+  Counts the number of items in a collection.
+
+  This function supports both v1 and v2 API endpoints based on the provided
+  Chroma.Collection struct.
+
+  ## Parameters
+
+    - **collection**: The Chroma.Collection struct representing the target collection.
+      For v2, this struct must have non-empty `tenant`, `database`, and `id`.
+      For v1, this struct must have a non-empty `id`.
+
+  ## Returns
+
+    The count of items in the collection (typically an integer) on success,
+    or `nil` or `0` on error, depending on the `handle_json_response/1` helper's
+    implementation for non-2xx responses.
+
+  ## Examples
+
+      # Assuming you have a v1 or v2 collection struct
+      iex> v1_collection = %Chroma.Collection{id: "v1_coll_id"}
+      iex> v2_collection = %Chroma.Collection{tenant: "t", database: "d", id: "v2_coll_id"}
+      iex> # Assuming handle_json_response is defined
+      iex> # Chroma.Collection.count(v1_collection)
+      # Expected to return the count (integer) or nil/0
+
+      iex> # Chroma.Collection.count(v2_collection)
+      # Expected to return the count (integer) or nil/0
+
+      iex> # Invalid collection struct
+      iex> # Chroma.Collection.count(%Chroma.Collection{})
+      # Expected to return {:error, "Invalid Chroma.Collection struct..."}
+
+  """
+  def count(%Chroma.Collection{tenant: tenant, database: database, id: id})
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    url =
+      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/count"
+
+    url
+    |> Req.get()
+    |> handle_json_response()
+  end
+
+  def count(%Chroma.Collection{id: id})
+      when is_binary(id) and id != "" do
+    url = "#{Chroma.api_url()}/collections/#{id}/count"
+
+    url
+    |> Req.get()
+    |> handle_json_response()
+  end
+
+  def count(%Chroma.Collection{} = collection),
+    do:
+      {:error,
+       "Invalid Chroma.Collection struct provided for count/1. Ensure collection has a non-empty id (and tenant/database for v2). Got: #{inspect(collection)}"}
+
+  def count(other),
+    do:
+      {:error,
+       "Invalid first argument for count. Expected Chroma.Collection struct, got: #{inspect(other)}"}
 
   # --- Private Helper Functions ---
 
-  # Handles responses expected to be a list of collections
   defp handle_response_list(req_result) do
     case handle_json_response(req_result) do
-      # Uses the multi-clause new/1 to handle V1 or V2 list items
       {:ok, body_list} when is_list(body_list) ->
         try do
           collections = Enum.map(body_list, &new/1)
@@ -720,7 +1011,6 @@ defmodule Chroma.Collection do
     end
   end
 
-  # Handles responses expected to be a single collection
   defp handle_response(req_result) do
     case handle_json_response(req_result) do
       {:ok, body_map} when is_map(body_map) ->
@@ -740,20 +1030,26 @@ defmodule Chroma.Collection do
 
   defp handle_json_response({:ok, %Req.Response{status: status, body: body}}) do
     case status do
-      code when code in 200..299 -> {:ok, body}
-      _ -> {:error, Map.get(body, "error", "API Error (Status: #{status})")}
+      code when code in 200..299 ->
+        {:ok, body}
+
+      _ ->
+        error_reason =
+          if is_map(body) and Map.has_key?(body, "error"), do: body["error"], else: body
+
+        {:error, error_reason}
     end
   end
 
-  defp handle_json_response({:error, _reason} = error_tuple), do: error_tuple
-  # defp handle_json_response(other), do: {:error, "Unexpected Req response: #{inspect(other)}"}
+  defp handle_json_response({:error, reason}), do: {:error, reason}
 
-  # Bang version of handle_json_response
-  defp handle_json_response!(req_result) do
-    case handle_json_response(req_result) do
+  # defp handle_json_response(other),
+  #   do: {:error, "Unexpected input to handle_json_response: #{inspect(other)}"}
+
+  defp handle_json_response!(any) do
+    case handle_json_response(any) do
       {:ok, body} -> body
-      # Consider raising a custom ChromaError
-      {:error, reason} -> raise inspect(reason)
+      {:error, reason} -> raise "Chroma API Error: #{inspect(reason)}"
     end
   end
 end
