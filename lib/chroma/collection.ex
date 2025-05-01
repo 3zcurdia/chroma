@@ -80,7 +80,7 @@ defmodule Chroma.Collection do
           |> Map.put(:query_embeddings, query_embeddings)
 
         url =
-          "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
+          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
 
         url
         |> Req.post(json: json_payload)
@@ -242,7 +242,7 @@ defmodule Chroma.Collection do
   def list(tenant, database)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" do
-    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections"
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
 
     url
     |> Req.get()
@@ -314,7 +314,7 @@ defmodule Chroma.Collection do
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
              is_binary(id) and id != "" do
-    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}"
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
     url
     |> Req.get()
@@ -385,7 +385,7 @@ defmodule Chroma.Collection do
     )
 
     json = %{name: name, metadata: metadata, get_or_create: false}
-    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections"
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
 
     url
     |> Req.post(json: json)
@@ -471,7 +471,7 @@ defmodule Chroma.Collection do
              is_binary(name) and name != "" and
              is_map(metadata) do
     json = %{name: name, metadata: metadata, get_or_create: true}
-    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections"
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
 
     url
     |> Req.post(json: json)
@@ -559,7 +559,7 @@ defmodule Chroma.Collection do
              is_binary(database) and database != "" and
              is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
 
     url
     |> Req.post(json: data)
@@ -642,7 +642,7 @@ defmodule Chroma.Collection do
              is_binary(database) and database != "" and
              is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/update"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/update"
 
     url
     |> Req.post(json: data)
@@ -727,7 +727,7 @@ defmodule Chroma.Collection do
              is_binary(database) and database != "" and
              is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/upsert"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/upsert"
 
     url
     |> Req.post(json: data)
@@ -823,7 +823,7 @@ defmodule Chroma.Collection do
     if map_size(json) == 0 do
       {:error, "No valid update fields (:new_name or :new_metadata) provided in the data map."}
     else
-      url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}"
+      url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
       url
       |> Req.put(json: json)
@@ -898,7 +898,7 @@ defmodule Chroma.Collection do
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
              is_binary(id) and id != "" do
-    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}"
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
     url
     |> Req.delete()
@@ -965,7 +965,7 @@ defmodule Chroma.Collection do
              is_binary(database) and database != "" and
              is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/count"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/count"
 
     url
     |> Req.get()
