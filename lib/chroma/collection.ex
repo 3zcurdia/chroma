@@ -363,8 +363,8 @@ defmodule Chroma.Collection do
      "Invalid tenant, database, or ID provided for get/3. Expected non-empty strings, got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, id=#{inspect(id)}"}
   end
 
-  @spec create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
-  @spec create(String.t(), String.t(), String.t(), map()) ::
+  @spec create(String.t(), map() | nil) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec create(String.t(), String.t(), String.t(), map() | nil) ::
           {:error, any()} | {:ok, Chroma.Collection.t()}
   @doc """
   Creates a new collection in the database.
@@ -410,7 +410,7 @@ defmodule Chroma.Collection do
 
   """
 
-  def create(tenant, database, name, metadata \\ %{})
+  def create(tenant, database, name, metadata \\ nil)
 
   def create(tenant, database, name, metadata)
       when is_binary(tenant) and tenant != "" and
@@ -436,7 +436,7 @@ defmodule Chroma.Collection do
      "Invalid tenant, database, name, or metadata provided for create/4. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
   end
 
-  def create(name, metadata \\ %{})
+  def create(name, metadata \\ nil)
 
   def create(name, metadata)
       when is_binary(name) and name != "" and
