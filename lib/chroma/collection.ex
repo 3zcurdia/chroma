@@ -415,13 +415,12 @@ defmodule Chroma.Collection do
   def create(tenant, database, name, metadata)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" and
-             is_map(metadata) do
+             is_binary(name) and name != "" do
     IO.puts(
       "Using v2 API for creating collection '#{name}' in tenant '#{tenant}', database '#{database}'."
     )
 
-    json = %{name: name, metadata: metadata, get_or_create: true}
+    json = %{name: name, metadata: metadata, get_or_create: false}
     url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
 
     IO.inspect(json, label: "JSON Payload for Collection Creation")
@@ -439,8 +438,7 @@ defmodule Chroma.Collection do
   def create(name, metadata \\ nil)
 
   def create(name, metadata)
-      when is_binary(name) and name != "" and
-             is_map(metadata) do
+      when is_binary(name) and name != "" do
     IO.puts("Using v1 API for creating collection '#{name}'.")
     json = %{name: name, metadata: metadata, get_or_create: false}
     url = "#{Chroma.api_url()}/collections"
