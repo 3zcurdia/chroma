@@ -139,91 +139,101 @@ defmodule Chroma.Collection do
   @doc """
   Creates a new `Chroma.Collection` struct from a map of attributes.
 
-  This function handles different input map structures based on the API version
-  or context from which the data originates.
+  This function handles map structures returned by the Chroma API, extracting
+  known fields into the struct. Fields not explicitly defined in the struct
+  will be ignored.
 
   ## Supported Map Structures:
 
-  1.  **v2-like:** Requires keys `"tenant"`, `"database"`, `"id"`, `"name"`, and `"metadata"`.
-      All required values should be strings, except for `"metadata"` which should be a map.
-  2.  **v1-like:** Requires keys `"id"`, `"name"`, and `"metadata"`.
-      `"id"` and `"name"` should be strings, and `"metadata"` should be a map.
-      `tenant` and `database` fields in the struct will be set to `nil`.
+  Any map containing at least `"id"`, `"name"`, and `"metadata"` keys.
+  If `"tenant"`, `"database"`, `"configuration_json"`, `"dimension"`,
+  `"log_position"`, and `"version"` are also present, they will be used for
+  the corresponding struct fields; otherwise, they will be nil.
 
   ## Parameters
 
-    - **attrs**: A map containing the collection attributes.
+    - **attrs**: A map containing the collection attributes from the API response
+      or other sources.
 
   ## Returns
 
-    - `{:ok, %Chroma.Collection{}}` if the map matches a supported structure and
-      contains valid data.
-    - `{:error, reason}` if the map does not match any supported structure
-      or contains invalid data.
+    - `{:ok, %Chroma.Collection{}}` if the map contains at least the required
+      `"id"`, `"name"`, and `"metadata"` keys with valid types.
+    - `{:error, reason}` if the map is missing required keys or contains
+      invalid data types for the core fields.
 
   ## Examples
 
-      iex> Chroma.Collection.new(%{"tenant" => "my_tenant", "database" => "my_database", "id" => "v2_coll", "name" => "V2 Collection", "metadata" => %{"source" => "api"}})
-      {:ok, %Chroma.Collection{tenant: "my_tenant", database: "my_database", id: "v2_coll", name: "V2 Collection", metadata: %{"source" => "api"}}}
+      iex> Chroma.Collection.new(%{"tenant" => "my_tenant", "database" => "my_database", "id" => "v2_coll", "name" => "V2 Collection", "metadata" => %{"source" => "api"}, "extra_key" => "extra_value"})
+      {:ok, %Chroma.Collection{tenant: "my_tenant", database: "my_database", id: "v2_coll", name: "V2 Collection", metadata: %{"source" => "api"}, configuration_json: nil, dimension: nil, log_position: nil, version: nil}} # Note: extra_key is not captured
 
-      iex> Chroma.Collection.new(%{"id" => "v1_coll", "name" => "V1 Collection", "metadata" => %{}})
-      {:ok, %Chroma.Collection{tenant: nil, database: nil, id: "v1_coll", name: "V1 Collection", metadata: %{}}}
+      iex> Chroma.Collection.new(%{"id" => "v1_coll", "name" => "V1 Collection", "metadata" => %{}, "another_extra" => 123})
+      {:ok, %Chroma.Collection{tenant: nil, database: nil, id: "v1_coll", name: "V1 Collection", metadata: %{}, configuration_json: nil, dimension: nil, log_position: nil, version: nil}} # Note: another_extra is not captured
+
+      iex> # Example of API list response structure
+      iex> api_list_map = %{
+      ...>   "configuration_json" => %{"embedding_function" => nil},
+      ...>   "database" => "sows_db",
+      ...>   "dimension" => nil,
+      ...>   "id" => "b85dd052-cfaa-40eb-980f-6f8920f27871",
+      ...>   "log_position" => 0,
+      ...>   "metadata" => %{"existing" => "meta"},
+      ...>   "name" => "sow_research",
+      ...>   "tenant" => "cws",
+      ...>   "version" => 0
+      ...> }
+      iex> Chroma.Collection.new(api_list_map)
+      {:ok, %Chroma.Collection{tenant: "cws", database: "sows_db", id: "b85dd052-cfaa-40eb-980f-6f8920f27871", name: "sow_research", metadata: %{"existing" => "meta"}, configuration_json: %{"embedding_function" => nil}, dimension: nil, log_position: 0, version: 0}}
 
       iex> Chroma.Collection.new(%{"id" => "invalid", "name" => "Missing Metadata"})
-      {:error, "Input map does not match any supported Chroma.Collection structure."}
-
-      iex> Chroma.Collection.new(%{"tenant" => "t", "database" => "d", "id" => "i", "name" => "n", "metadata" => "not a map"})
-      {:error, "Input map does not match any supported Chroma.Collection structure."} # Or a more specific validation error if added later
+      {:error, "Input map is missing required keys: \"metadata\"."}
 
   """
+  def new(attrs) when is_map(attrs) do
+    # Extract core fields, using default nil if not present
+    id = Map.get(attrs, "id")
+    name = Map.get(attrs, "name")
+    metadata = Map.get(attrs, "metadata")
+    tenant = Map.get(attrs, "tenant")
+    database = Map.get(attrs, "database")
+    configuration_json = Map.get(attrs, "configuration_json")
+    dimension = Map.get(attrs, "dimension")
+    log_position = Map.get(attrs, "log_position")
+    version = Map.get(attrs, "version")
 
-  def new(%{
-        "tenant" => tenant,
-        "database" => database,
-        "id" => id,
-        "name" => name,
-        "metadata" => metadata,
-        "configuration_json" => configuration_json,
-        "dimension" => dimension,
-        "log_position" => log_position,
-        "version" => version
-      })
-      when is_binary(tenant) and is_binary(database) and is_binary(id) and is_binary(name) and
-             is_map(metadata) do
+    # Basic validation for required fields and types
+    unless is_binary(id) and id != "" do
+      {:error, "Input map is missing or has invalid type for required key: \"id\"."}
+    end
+
+    unless is_binary(name) and name != "" do
+      {:error, "Input map is missing or has invalid type for required key: \"name\"."}
+    end
+
+    unless is_map(metadata) or is_nil(metadata) do
+      {:error, "Input map has invalid type for key: \"metadata\". Expected map or nil."}
+    end
+
+    # Create the struct using the extracted data
     {:ok,
      %Chroma.Collection{
-       tenant: tenant,
-       database: database,
        id: id,
        name: name,
+       # Use the original metadata
        metadata: metadata,
+       # Will be nil if not in attrs
+       tenant: tenant,
+       # Will be nil if not in attrs
+       database: database,
+       # Will be nil if not in attrs
        configuration_json: configuration_json,
+       # Will be nil if not in attrs
        dimension: dimension,
+       # Will be nil if not in attrs
        log_position: log_position,
+       # Will be nil if not in attrs
        version: version
      }}
-  end
-
-  def new(%{"id" => id, "name" => name, "metadata" => metadata})
-      when is_binary(id) and is_binary(name) and is_map(metadata) do
-    # Set tenant and database to nil for v1
-    {:ok,
-     %Chroma.Collection{
-       tenant: nil,
-       database: nil,
-       id: id,
-       name: name,
-       metadata: metadata,
-       configuration_json: nil,
-       dimension: nil,
-       log_position: nil,
-       version: nil
-     }}
-  end
-
-  def new(attrs) when is_map(attrs) do
-    {:error,
-     "Input map does not match any supported Chroma.Collection structure. #{inspect(attrs)}"}
   end
 
   def new(other) do
