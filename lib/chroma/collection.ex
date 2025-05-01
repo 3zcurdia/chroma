@@ -421,7 +421,7 @@ defmodule Chroma.Collection do
       "Using v2 API for creating collection '#{name}' in tenant '#{tenant}', database '#{database}'."
     )
 
-    json = %{name: name, metadata: metadata, get_or_create: false}
+    json = %{name: name, metadata: metadata, get_or_create: true}
     url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
 
     url
