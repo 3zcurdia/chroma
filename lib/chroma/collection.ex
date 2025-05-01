@@ -363,7 +363,8 @@ defmodule Chroma.Collection do
      "Invalid tenant, database, or ID provided for get/3. Expected non-empty strings, got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, id=#{inspect(id)}"}
   end
 
-  @spec create(String.t() | String.t(), String.t(), String.t(), map() | nil) ::
+  @spec create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec create(String.t(), String.t(), String.t(), map() | nil) ::
           {:error, any()} | {:ok, Chroma.Collection.t()}
   @doc """
   Creates a new collection in the database.
@@ -434,7 +435,7 @@ defmodule Chroma.Collection do
      "Invalid tenant, database, name, or metadata provided for create/4. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
   end
 
-  def create(name, metadata \\ nil)
+  def create(name, metadata \\ %{})
 
   def create(name, metadata)
       when is_binary(name) and name != "" do
@@ -453,7 +454,7 @@ defmodule Chroma.Collection do
   end
 
   @spec get_or_create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
-  @spec get_or_create(String.t(), String.t(), String.t(), map()) ::
+  @spec get_or_create(String.t(), String.t(), String.t(), map() | nil) ::
           {:error, any()} | {:ok, Chroma.Collection.t()}
   @doc """
   Gets or creates a collection in the database.
@@ -499,7 +500,7 @@ defmodule Chroma.Collection do
 
   """
 
-  def get_or_create(tenant, database, name, metadata \\ %{})
+  def get_or_create(tenant, database, name, metadata \\ nil)
 
   def get_or_create(tenant, database, name, metadata)
       when is_binary(tenant) and tenant != "" and
@@ -537,7 +538,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid collection name or metadata provided for get_or_create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
 
-  # Assuming handle_json_response! returns any
   @spec add(Chroma.Collection.t(), map()) :: any()
   @doc """
   Adds a batch of embeddings, documents, and/or metadata to a collection.
