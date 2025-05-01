@@ -196,7 +196,8 @@ defmodule Chroma.Collection do
   end
 
   def new(attrs) when is_map(attrs) do
-    {:error, "Input map does not match any supported Chroma.Collection structure."}
+    {:error,
+     "Input map does not match any supported Chroma.Collection structure. #{inspect(attrs)}"}
   end
 
   def new(other) do
