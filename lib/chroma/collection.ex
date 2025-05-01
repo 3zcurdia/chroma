@@ -27,50 +27,149 @@ defmodule Chroma.Collection do
           metadata: map() | nil
         }
 
+  @spec query(Chroma.Collection.t(), keyword()) :: {:error, any()} | {:ok, any()}
   @doc """
-  Queries a specific tenant's database  collection (V2 endpoint).
+  It allows to query the database for similar embeddings.
 
-  Requires a `Chroma.Collection` struct retrieved via a V2 endpoint
-  (must have non-nil `tenant`, `database`, and `id`).
+  Handles both v1 and v2 API versions based on the collection struct.
 
   ## Parameters
-  - `collection`: A `Chroma.Collection` struct with non-nil `tenant`, `database`, and `id`.
-  - `kargs`: A keyword list or map containing query parameters.
-    - `query_embeddings`: The embeddings to query against.
-    - `include`: Optional fields to include in the response (default: `["metadatas", "documents", "distances"]`).
-    - `results`: The number of results to return (default: 10).
+
+    - **collection**: The Chroma.Collection struct.
+    - **query_embeddings**: A list of embeddings to query. (Required in kargs)
+    - **results**: The number of results to return. (Optional in kargs, defaults to 10)
+    - **where**: A map of metadata fields to filter by. (Optional in kargs)
+    - **where_document**: A map of document fields to filter by. (Optional in kargs)
+    - **include**: List of items to include in the response (e.g., "metadatas", "documents", "distances"). (Optional in kargs, defaults to ["metadatas", "documents", "distances"])
 
   ## Examples
-      iex> collection = Chroma.Collection.get!("my_collection", "my_tenant", "my_db") # Get a V2 collection
-      iex> Chroma.Collection.query(collection, query_embeddings: [[1.1, 2.3, 3.2]])
-      {:ok, %{"ids" => [["id1"]], ...}}
+
+    # v2 API example
+      iex> v2_collection = %Chroma.Collection{tenant: "my_tenant", database: "my_database", id: "v2_collection_id"}
+      iex> # Assuming serving is loaded and produces embeddings
+      iex> query_embs = [[1.1, 2.1, 3.1], [4.1, 5.1, 6.1]] # Example embeddings
+      iex> # Assuming Req and handle_json_response are available
+      iex> # Chroma.Collection.query(v2_collection, query_embeddings: query_embs, results: 5, where: %{"source": "documentA"})
+      # Expected to call v2 API endpoint
+
+    # v1 API example
+      iex> v1_collection = %Chroma.Collection{id: "v1_collection_id"} # tenant and database are nil or not present
+      iex> query_embs = [[7.1, 8.1, 9.1]] # Example embeddings
+      iex> # Assuming Req and handle_json_response are available
+      iex> # Chroma.Collection.query(v1_collection, query_embeddings: query_embs)
+      # Expected to call v1 API endpoint
+
   """
-  @spec query(t(), keyword() | map()) :: {:error, any()} | {:ok, map()}
-  def query(%__MODULE__{tenant: tenant, database: database, id: id}, kargs)
-      # Guards ensure V2 struct
-      when is_binary(tenant) and is_binary(database) and is_binary(id) do
-    {results, query_params} =
+
+  def query(%Chroma.Collection{tenant: tenant, database: database, id: id}, kargs)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    {n_results, map} =
       kargs
       |> Enum.into(%{})
       |> Map.put_new(:include, ["metadatas", "documents", "distances"])
-      |> Map.put_new(:results, 10)
-      |> Map.pop!(:results)
+      |> Map.put_new(:n_results, 10)
+      |> Map.pop(:n_results)
 
-    json_payload = Map.put(query_params, :n_results, results)
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
+    case Map.fetch(map, :query_embeddings) do
+      {:ok, query_embeddings} ->
+        json_payload =
+          map
+          |> Map.put(:n_results, n_results)
+          |> Map.put(:query_embeddings, query_embeddings)
 
-    url
-    |> Req.post(json: json_payload)
-    |> handle_json_response()
+        url =
+          "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
+
+        url
+        |> Req.post(json: json_payload)
+        |> handle_json_response()
+
+      :error ->
+        {:error, "Missing required parameter in kargs: :query_embeddings"}
+    end
   end
 
-  @doc """
-  Creates a new `Chroma.Collection` struct from a map (API response data).
+  def query(%Chroma.Collection{id: id}, kargs)
+      when is_binary(id) and id != "" do
+    {n_results, map} =
+      kargs
+      |> Enum.into(%{})
+      |> Map.put_new(:include, ["metadatas", "documents", "distances"])
+      |> Map.put_new(:n_results, 10)
+      |> Map.pop(:n_results)
 
-  Handles maps with or without `tenant` and `database` keys.
-  Requires `id`, `name`, and `metadata` keys.
+    case Map.fetch(map, :query_embeddings) do
+      {:ok, query_embeddings} ->
+        json_payload =
+          map
+          |> Map.put(:n_results, n_results)
+          |> Map.put(:query_embeddings, query_embeddings)
+
+        url = "#{Chroma.api_url()}/collections/#{id}/query"
+
+        url
+        |> Req.post(json: json_payload)
+        |> handle_json_response()
+
+      :error ->
+        {:error, "Missing required parameter in kargs: :query_embeddings"}
+    end
+  end
+
+  def query(%Chroma.Collection{} = collection, _kargs) do
+    {:error,
+     "Invalid Chroma.Collection struct for query: #{inspect(collection)}. Ensure id is a non-empty string, and for v2, tenant and database are also non-empty strings."}
+  end
+
+  def query(other, _kargs),
+    do:
+      {:error,
+       "Invalid first argument for query. Expected Chroma.Collection struct, got: #{inspect(other)}"}
+
+  @spec new(map) :: {:ok, Chroma.Collection.t()} | {:error, String.t()}
+  @doc """
+  Creates a new `Chroma.Collection` struct from a map of attributes.
+
+  This function handles different input map structures based on the API version
+  or context from which the data originates.
+
+  ## Supported Map Structures:
+
+  1.  **v2-like:** Requires keys `"tenant"`, `"database"`, `"id"`, `"name"`, and `"metadata"`.
+      All required values should be strings, except for `"metadata"` which should be a map.
+  2.  **v1-like:** Requires keys `"id"`, `"name"`, and `"metadata"`.
+      `"id"` and `"name"` should be strings, and `"metadata"` should be a map.
+      `tenant` and `database` fields in the struct will be set to `nil`.
+
+  ## Parameters
+
+    - **attrs**: A map containing the collection attributes.
+
+  ## Returns
+
+    - `{:ok, %Chroma.Collection{}}` if the map matches a supported structure and
+      contains valid data.
+    - `{:error, reason}` if the map does not match any supported structure
+      or contains invalid data.
+
+  ## Examples
+
+      iex> Chroma.Collection.new(%{"tenant" => "my_tenant", "database" => "my_database", "id" => "v2_coll", "name" => "V2 Collection", "metadata" => %{"source" => "api"}})
+      {:ok, %Chroma.Collection{tenant: "my_tenant", database: "my_database", id: "v2_coll", name: "V2 Collection", metadata: %{"source" => "api"}}}
+
+      iex> Chroma.Collection.new(%{"id" => "v1_coll", "name" => "V1 Collection", "metadata" => %{}})
+      {:ok, %Chroma.Collection{tenant: nil, database: nil, id: "v1_coll", name: "V1 Collection", metadata: %{}}}
+
+      iex> Chroma.Collection.new(%{"id" => "invalid", "name" => "Missing Metadata"})
+      {:error, "Input map does not match any supported Chroma.Collection structure."}
+
+      iex> Chroma.Collection.new(%{"tenant" => "t", "database" => "d", "id" => "i", "name" => "n", "metadata" => "not a map"})
+      {:error, "Input map does not match any supported Chroma.Collection structure."} # Or a more specific validation error if added later
+
   """
-  @spec new(map()) :: t() | no_return()
+
   def new(%{
         "tenant" => tenant,
         "database" => database,
@@ -78,64 +177,84 @@ defmodule Chroma.Collection do
         "name" => name,
         "metadata" => metadata
       })
-      when is_binary(tenant) and is_binary(database) do
-    %__MODULE__{
-      tenant: tenant,
-      database: database,
-      id: id,
-      name: name,
-      metadata: metadata
-    }
+      when is_binary(tenant) and is_binary(database) and is_binary(id) and is_binary(name) and
+             is_map(metadata) do
+    {:ok,
+     %Chroma.Collection{
+       tenant: tenant,
+       database: database,
+       id: id,
+       name: name,
+       metadata: metadata
+     }}
   end
 
-  def new(%{"id" => id, "name" => name, "metadata" => metadata} = map)
-      # Ensure tenant/db keys are NOT present to avoid ambiguity with Clause 1
-      when is_map_key(map, "tenant") == false and is_map_key(map, "database") == false do
-    %__MODULE__{
-      tenant: nil,
-      database: nil,
-      id: id,
-      name: name,
-      metadata: metadata
-    }
+  def new(%{"id" => id, "name" => name, "metadata" => metadata})
+      when is_binary(id) and is_binary(name) and is_map(metadata) do
+    # Set tenant and database to nil for v1
+    {:ok, %Chroma.Collection{tenant: nil, database: nil, id: id, name: name, metadata: metadata}}
   end
 
-  def new(other_map) do
-    raise ArgumentError,
-          "Cannot create Chroma.Collection struct. Map must contain 'id', 'name', 'metadata', and optionally 'tenant' and 'database'. Got: #{inspect(other_map)}"
+  def new(attrs) when is_map(attrs) do
+    {:error, "Input map does not match any supported Chroma.Collection structure."}
   end
 
+  def new(other) do
+    {:error, "Invalid input for Chroma.Collection.new. Expected a map, got: #{inspect(other)}"}
+  end
+
+  @spec list() :: {:error, any()} | {:ok, list(Chroma.Collection.t())}
+  @spec list(String.t(), String.t()) :: {:error, any()} | {:ok, list(Chroma.Collection.t())}
   @doc """
-  Lists all collections using the V1 endpoint (global scope).
+  Lists all stored collections in the database.
 
-  Collections returned will have `tenant` and `database` set to `nil`.
+  This function supports both v1 and v2 API endpoints.
+
+  - Calling `list()` will use the v1 API endpoint.
+  - Calling `list(tenant, database)` will use the v2 API endpoint, requiring
+    valid tenant and database strings.
+
+  ## Examples
+
+      # v1 API example
+      iex> # Assuming Chroma.api_url() points to a v1 compatible endpoint
+      iex> # Chroma.Collection.list()
+      # Expected to call v1 API endpoint and return {:ok, [%Chroma.Collection{...}, ...]}
+
+      # v2 API example
+      iex> # Assuming Chroma.api_url() points to a v2 compatible endpoint
+      iex> # Chroma.Collection.list("my_tenant", "my_database")
+      # Expected to call v2 API endpoint and return {:ok, [%Chroma.Collection{...}, ...]}
+
+      iex> # Invalid v2 call
+      iex> # Chroma.Collection.list("invalid_tenant", "")
+      # Expected to return {:error, "Invalid tenant or database provided..."}
+
   """
-  @spec list() :: {:error, any()} | {:ok, list(t())}
-  def list() do
-    url = "#{Chroma.api_url()}/collections"
 
-    url
+  # Clause for v1 API: Takes no arguments.
+  def list do
+    "#{Chroma.api_url()}/collections"
     |> Req.get()
-    # Will use new/1 to create V1 structs (tenant/db = nil)
     |> handle_response_list()
   end
 
-  @doc """
-  Lists all collections within a specific tenant and database (V2 endpoint).
-
-  Collections returned will have `tenant` and `database` fields populated.
-  """
-  @spec list(String.t(), String.t()) :: {:error, any()} | {:ok, list(t())}
-  def list(tenant, database) when is_binary(tenant) and is_binary(database) do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
+  def list(tenant, database)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" do
+    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections"
 
     url
     |> Req.get()
-    # Will use new/1 to create V2 structs
+    # Assuming handle_response_list/1 is defined elsewhere
     |> handle_response_list()
   end
 
-  # --- Get Collection ---
+  # Catch-all clause for list/2 with invalid tenant/database inputs.
+  def list(tenant, database),
+    do:
+      {:error,
+       "Invalid tenant or database provided for listing collections. Expected non-empty strings, got: tenant=#{inspect(tenant)}, database=#{inspect(database)}"}
 
   @doc """
   Gets a collection by name using the V1 endpoint (global scope).
@@ -189,8 +308,6 @@ defmodule Chroma.Collection do
     get(name, tenant, database)
     |> handle_response!()
   end
-
-  # --- Create Collection ---
 
   @doc """
   Creates a collection using the V1 endpoint (global scope).
