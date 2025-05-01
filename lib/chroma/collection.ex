@@ -256,193 +256,333 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid tenant or database provided for listing collections. Expected non-empty strings, got: tenant=#{inspect(tenant)}, database=#{inspect(database)}"}
 
+  @spec get(String.t()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec get(String.t(), String.t(), String.t()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
   @doc """
-  Gets a collection by name using the V1 endpoint (global scope).
+  Gets a single collection by name (v1 API) or by tenant, database, and ID (v2 API).
 
-  The returned collection struct will have `tenant` and `database` set to `nil`.
+  - Calling `get(name)` will use the v1 API endpoint to get a collection by its name.
+  - Calling `get(tenant, database, id)` will use the v2 API endpoint to get a collection
+    by its tenant, database, and ID.
+
+  ## Parameters
+
+    - **name**: The name of the collection (for v1 API).
+    - **tenant**: The tenant of the collection (for v2 API).
+    - **database**: The database of the collection (for v2 API).
+    - **id**: The ID of the collection (for v2 API).
+
+  ## Returns
+
+    - `{:ok, %Chroma.Collection{}}` if the collection is found.
+    - `{:error, reason}` if the collection is not found or an error occurs.
+
+  ## Examples
+
+      # v1 API example
+      iex> # Assuming Chroma.api_url() points to a v1 compatible endpoint
+      iex> # Chroma.Collection.get("my_v1_collection_name")
+      # Expected to call v1 API endpoint and return {:ok, %Chroma.Collection{...}}
+
+      # v2 API example
+      iex> # Assuming Chroma.api_url() points to a v2 compatible endpoint
+      iex> # Chroma.Collection.get("my_tenant", "my_database", "my_v2_collection_id")
+      # Expected to call v2 API endpoint and return {:ok, %Chroma.Collection{...}}
+
+      iex> # Invalid v1 call
+      iex> # Chroma.Collection.get("")
+      # Expected to return {:error, "Invalid collection name..."}
+
+      iex> # Invalid v2 call
+      iex> # Chroma.Collection.get("t", "", "i")
+      # Expected to return {:error, "Invalid tenant, database, or ID..."}
+
   """
-  @spec get(String.t()) :: {:error, any()} | {:ok, t()}
+  def get(name) when is_binary(name) and name != "" do
+    "#{Chroma.api_url()}/collections/#{name}"
+    |> Req.get()
+    # Assuming handle_response/1 is defined elsewhere
+    |> handle_response()
+  end
+
   def get(name) do
-    # Clause 1: Global get (V1)
-    url = "#{Chroma.api_url()}/collections/#{name}"
+    {:error,
+     "Invalid collection name provided for get/1. Expected a non-empty string, got: #{inspect(name)}"}
+  end
+
+  def get(tenant, database, id)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
     url
     |> Req.get()
-    # Will use new/1 for V1 struct
     |> handle_response()
   end
 
-  @doc """
-  Gets a collection by name within a specific tenant and database (V2 endpoint).
+  def get(tenant, database, id) do
+    {:error,
+     "Invalid tenant, database, or ID provided for get/3. Expected non-empty strings, got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, id=#{inspect(id)}"}
+  end
 
-  The returned collection struct will have `tenant` and `database` fields populated.
+  @spec create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec create(String.t(), String.t(), String.t(), map()) ::
+          {:error, any()} | {:ok, Chroma.Collection.t()}
+  @doc """
+  Creates a new collection in the database.
+
+  This function supports both v1 and v2 API endpoints.
+
+  - Calling `create(name, metadata \\ %{})` will use the v1 API endpoint,
+    creating a collection with the given name and metadata.
+  - Calling `create(tenant, database, name, metadata \\ %{})` will use the v2 API endpoint,
+    creating a collection within the specified tenant and database with the given name and metadata.
+
+  ## Parameters
+
+    - **name**: The name of the collection (for both v1 and v2 API).
+    - **metadata**: An optional map of metadata for the collection (defaults to %{}).
+    - **tenant**: The tenant for the new collection (for v2 API).
+    - **database**: The database for the new collection (for v2 API).
+
+  ## Returns
+
+    - `{:ok, %Chroma.Collection{}}` if the collection is created successfully.
+    - `{:error, reason}` if the creation fails or invalid inputs are provided.
+
+  ## Examples
+
+      # v1 API example
+      iex> # Assuming Chroma.api_url() points to a v1 compatible endpoint
+      iex> # Chroma.Collection.create("my_new_v1_collection", %{type: "example"})
+      # Expected to call v1 API endpoint and return {:ok, %Chroma.Collection{...}}
+
+      # v2 API example
+      iex> # Assuming Chroma.api_url() points to a v2 compatible endpoint
+      iex> # Chroma.Collection.create("my_tenant", "my_database", "my_new_v2_collection", %{source: "elixir"})
+      # Expected to call v2 API endpoint and return {:ok, %Chroma.Collection{...}}
+
+      iex> # Invalid v1 call
+      iex> # Chroma.Collection.create("", %{})
+      # Expected to return {:error, "Invalid collection name..."}
+
+      iex> # Invalid v2 call
+      iex> # Chroma.Collection.create("t", "d", "", %{})
+      # Expected to return {:error, "Invalid collection name..."}
+
   """
-  @spec get(String.t(), String.t(), String.t()) :: {:error, any()} | {:ok, t()}
-  def get(name, tenant, database) do
-    # Clause 2: Tenant/Database specific get (V2)
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}"
+
+  def create(tenant, database, name, metadata \\ %{})
+
+  def create(tenant, database, name, metadata)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(name) and name != "" and
+             is_map(metadata) do
+    IO.puts(
+      "Using v2 API for creating collection '#{name}' in tenant '#{tenant}', database '#{database}'."
+    )
+
+    json = %{name: name, metadata: metadata, get_or_create: false}
+    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections"
 
     url
-    |> Req.get()
-    # Will use new/1 for V2 struct
+    |> Req.post(json: json)
     |> handle_response()
   end
 
-  @doc """
-  Gets a collection by name (globally, V1), raising an error on failure.
-  """
-  @spec get!(String.t()) :: t()
-  def get!(name) do
-    # Bang Clause 1: Calls get/1
-    name
-    |> get()
-    |> handle_response!()
+  def create(tenant, database, name, metadata) do
+    {:error,
+     "Invalid tenant, database, name, or metadata provided for create/4. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
   end
 
-  @doc """
-  Gets a collection by name within a specific tenant/database (V2), raising error on failure.
-  """
-  @spec get!(String.t(), String.t(), String.t()) :: t()
-  def get!(name, tenant, database) do
-    # Bang Clause 2: Calls get/3
-    get(name, tenant, database)
-    |> handle_response!()
-  end
+  def create(name, metadata \\ %{})
 
-  @doc """
-  Creates a collection using the V1 endpoint (global scope).
-
-  The returned collection struct will have `tenant` and `database` set to `nil`.
-  """
-  @spec create(String.t(), map()) :: {:error, any()} | {:ok, t()}
-  def create(name, metadata \\ %{}) do
-    # Clause 1: Global create (V1)
+  def create(name, metadata)
+      when is_binary(name) and name != "" and
+             is_map(metadata) do
+    IO.puts("Using v1 API for creating collection '#{name}'.")
     json = %{name: name, metadata: metadata, get_or_create: false}
     url = "#{Chroma.api_url()}/collections"
 
     url
     |> Req.post(json: json)
-    # Will use new/1 for V1 struct
     |> handle_response()
   end
 
-  @doc """
-  Creates a collection within a specific tenant and database (V2 endpoint).
+  def create(name, metadata) do
+    {:error,
+     "Invalid collection name or metadata provided for create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
+  end
 
-  The returned collection struct will have `tenant` and `database` fields populated.
+  @spec get_or_create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec get_or_create(String.t(), String.t(), String.t(), map()) ::
+          {:error, any()} | {:ok, Chroma.Collection.t()}
+  @doc """
+  Gets or creates a collection in the database.
+
+  This function supports both v1 and v2 API endpoints. If a collection with the
+  given name (v1) or tenant/database/name (v2) exists, it will be returned.
+  Otherwise, a new collection will be created.
+
+  - Calling `get_or_create(name, metadata \\ %{})` will use the v1 API endpoint.
+  - Calling `get_or_create(tenant, database, name, metadata \\ %{})` will use the v2 API endpoint.
+
+  ## Parameters
+
+    - **name**: The name of the collection (for both v1 and v2 API).
+    - **metadata**: An optional map of metadata for the collection (defaults to %{}).
+    - **tenant**: The tenant for the collection (for v2 API).
+    - **database**: The database for the collection (for v2 API).
+
+  ## Returns
+
+    - `{:ok, %Chroma.Collection{}}` if the collection is successfully retrieved or created.
+    - `{:error, reason}` if the operation fails or invalid inputs are provided.
+
+  ## Examples
+
+      # v1 API example
+      iex> # Assuming Chroma.api_url() points to a v1 compatible endpoint
+      iex> # Chroma.Collection.get_or_create("my_v1_collection", %{type: "example"})
+      # Expected to call v1 API endpoint and return {:ok, %Chroma.Collection{...}}
+
+      # v2 API example
+      iex> # Assuming Chroma.api_url() points to a v2 compatible endpoint
+      iex> # Chroma.Collection.get_or_create("my_tenant", "my_database", "my_v2_collection", %{source: "elixir"})
+      # Expected to call v2 API endpoint and return {:ok, %Chroma.Collection{...}}
+
+      iex> # Invalid v1 call
+      iex> # Chroma.Collection.get_or_create("", %{})
+      # Expected to return {:error, "Invalid collection name..."}
+
+      iex> # Invalid v2 call
+      iex> # Chroma.Collection.get_or_create("t", "d", "", %{})
+      # Expected to return {:error, "Invalid collection name..."}
+
   """
-  @spec create(String.t(), String.t(), String.t(), map()) :: {:error, any()} | {:ok, t()}
-  def create(name, tenant, database, metadata \\ %{}) do
-    # Clause 2: Tenant/Database specific create (V2)
-    json = %{name: name, metadata: metadata, get_or_create: false}
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
+
+  def get_or_create(tenant, database, name, metadata \\ %{})
+
+  def get_or_create(tenant, database, name, metadata)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(name) and name != "" and
+             is_map(metadata) do
+    json = %{name: name, metadata: metadata, get_or_create: true}
+    url = "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections"
 
     url
     |> Req.post(json: json)
-    # Will use new/1 for V2 struct
     |> handle_response()
   end
 
-  @doc """
-  Creates a collection (globally, V1), raising an error on failure.
-  """
-  @spec create!(String.t(), map()) :: t()
-  def create!(name, metadata \\ %{}) do
-    # Bang Clause 1: Calls create/2
-    create(name, metadata)
-    |> handle_response!()
+  def get_or_create(tenant, database, name, metadata) do
+    {:error,
+     "Invalid tenant, database, name, or metadata provided for get_or_create/4. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
   end
 
-  @doc """
-  Creates a collection within a specific tenant/database (V2), raising error on failure.
-  """
-  @spec create!(String.t(), String.t(), String.t(), map()) :: t()
-  def create!(name, tenant, database, metadata \\ %{}) do
-    # Bang Clause 2: Calls create/4
-    create(name, tenant, database, metadata)
-    |> handle_response!()
-  end
+  def get_or_create(name, metadata \\ %{})
 
-  # --- Get or Create Collection ---
-
-  @doc """
-  Gets or creates a collection by name using the V1 endpoint (global scope).
-
-  The returned collection struct will have `tenant` and `database` set to `nil`.
-  """
-  @spec get_or_create(String.t(), map()) :: {:error, any()} | {:ok, t()}
-  def get_or_create(name, metadata \\ %{}) do
-    # Clause 1: Global get_or_create (V1)
+  def get_or_create(name, metadata)
+      when is_binary(name) and name != "" and
+             is_map(metadata) do
     json = %{name: name, metadata: metadata, get_or_create: true}
     url = "#{Chroma.api_url()}/collections"
 
     url
     |> Req.post(json: json)
-    # Will use new/1 for V1 struct
     |> handle_response()
   end
 
-  @doc """
-  Gets or creates a collection by name within a specific tenant and database (V2 endpoint).
+  def get_or_create(name, metadata) do
+    {:error,
+     "Invalid collection name or metadata provided for get_or_create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
+  end
 
-  The returned collection struct will have `tenant` and `database` fields populated.
+  # Assuming handle_json_response! returns any
+  @spec add(Chroma.Collection.t(), map()) :: any()
+  @doc """
+  Adds a batch of embeddings, documents, and/or metadata to a collection.
+
+  This function supports both v1 and v2 API endpoints based on the provided
+  Chroma.Collection struct.
+
+  ## Parameters
+
+    - **collection**: The Chroma.Collection struct representing the target collection.
+      For v2, this struct must have non-empty `tenant`, `database`, and `id`.
+      For v1, this struct must have a non-empty `id`.
+    - **data**: A map containing the data to add. This map should include at least one
+      of the following keys: `:embeddings`, `:documents`, `:ids`.
+      Optional keys include `:metadatas` and `:uris`.
+
+      Example data map:
+      %{
+        embeddings: [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]],
+        documents: ["doc1 content", "doc2 content"],
+        ids: ["id1", "id2"],
+        metadatas: [%{source: "a"}, %{source: "b"}]
+      }
+
+  ## Returns
+
+    The result of the underlying HTTP request handling, typically `nil` on success
+    for the `handle_json_response!/1` helper, or raises an error on failure.
+
+  ## Examples
+
+      # Assuming you have a v1 or v2 collection struct and a data map
+      iex> v1_collection = %Chroma.Collection{id: "v1_coll_id"}
+      iex> v2_collection = %Chroma.Collection{tenant: "t", database: "d", id: "v2_coll_id"}
+      iex> data_to_add = %{
+      ...>   embeddings: [[1.0, 2.0]],
+      ...>   documents: ["test document"],
+      ...>   ids: ["test_id"]
+      ...> }
+      iex> # Assuming handle_json_response! is defined
+      iex> # Chroma.Collection.add(v1_collection, data_to_add)
+      # Expected to call v1 API endpoint and return nil or raise
+
+      iex> # Chroma.Collection.add(v2_collection, data_to_add)
+      # Expected to call v2 API endpoint and return nil or raise
+
+      iex> # Invalid collection struct
+      iex> # Chroma.Collection.add(%Chroma.Collection{}, data_to_add)
+      # Expected to return {:error, "Invalid Chroma.Collection struct..."}
+
   """
-  @spec get_or_create(String.t(), String.t(), String.t(), map()) :: {:error, any()} | {:ok, t()}
-  def get_or_create(name, tenant, database, metadata \\ %{}) do
-    # Clause 2: Tenant/Database specific get_or_create (V2)
-    json = %{name: name, metadata: metadata, get_or_create: true}
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections"
+
+  def add(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
+      when is_binary(tenant) and tenant != "" and
+             is_binary(database) and database != "" and
+             is_binary(id) and id != "" do
+    url =
+      "#{Chroma.api_url()}/api/v1/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
 
     url
-    |> Req.post(json: json)
-    # Will use new/1 for V2 struct
-    |> handle_response()
+    |> Req.post(json: data)
+    |> handle_json_response!()
   end
 
-  @doc """
-  Gets or creates a collection (globally, V1), raising an error on failure.
-  """
-  @spec get_or_create!(String.t(), map()) :: t()
-  def get_or_create!(name, metadata \\ %{}) do
-    # Bang Clause 1: Calls get_or_create/2
-    get_or_create(name, metadata)
-    |> handle_response!()
-  end
-
-  @doc """
-  Gets or creates a collection within a specific tenant/database (V2), raising error on failure.
-  """
-  @spec get_or_create!(String.t(), String.t(), String.t(), map()) :: t()
-  def get_or_create!(name, tenant, database, metadata \\ %{}) do
-    # Bang Clause 2: Calls get_or_create/4
-    get_or_create(name, tenant, database, metadata)
-    |> handle_response!()
-  end
-
-  @doc """
-  Adds a batch of embeddings to the specified collection (V1 endpoint).
-  """
-  @spec add(id :: String.t(), data :: map()) :: {:error, any()} | {:ok, any()}
-  def add(id, %{} = data) when is_binary(id) do
+  def add(%Chroma.Collection{id: id}, %{} = data)
+      when is_binary(id) and id != "" do
     url = "#{Chroma.api_url()}/collections/#{id}/add"
 
     url
     |> Req.post(json: data)
-    |> handle_json_response()
+    |> handle_json_response!()
   end
 
-  @doc """
-  Adds a batch of embeddings to the specified collection (V2 endpoint).
-  """
-  @spec add(tenant :: String.t(), database :: String.t(), id :: String.t(), data :: map()) ::
-          {:error, any()} | {:ok, any()}
-  def add(tenant, database, id, %{} = data)
-      when is_binary(tenant) and is_binary(database) and is_binary(id) do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
+  def add(%Chroma.Collection{} = collection, data) do
+    {:error,
+     "Invalid Chroma.Collection struct or data map provided for add/2. Ensure collection has a non-empty id (and tenant/database for v2) and data is a map. Got: collection=#{inspect(collection)}, data=#{inspect(data)}"}
+  end
 
-    url
-    |> Req.post(json: data)
-    |> handle_json_response()
+  def add(other, data) do
+    {:error,
+     "Invalid first argument for add. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
   end
 
   # --- Update Embeddings ---
@@ -595,14 +735,6 @@ defmodule Chroma.Collection do
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  # Bang version of handle_response
-  defp handle_response!(response_tuple) do
-    case response_tuple do
-      {:ok, body} -> body
-      {:error, reason} -> raise inspect(reason)
     end
   end
 
