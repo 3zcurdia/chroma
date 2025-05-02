@@ -44,14 +44,14 @@ defmodule Chroma.Tenant do
       {:ok, %{}}
 
       iex> Chroma.Tenant.create(123)
-      {:error, "Tenant name must be a string; received: 123"}
+      {:error, "Tenant name must be a string, and greater than 2 characters; received: 123"}
 
       iex> Chroma.Tenant.create("my_tenant")
       {:error, "Unauthorized: Invalid API key"}
   """
 
   @spec create(String.t()) :: {:ok, %{}} | {:error, String.t()}
-  def create(name) when is_binary(name) do
+  def create(name) when is_binary(name) and length(name) > 2 do
     url = "#{Chroma.api_url()}/tenants"
     json = %{name: name}
 
@@ -59,7 +59,10 @@ defmodule Chroma.Tenant do
     |> handle_response()
   end
 
-  def create(name), do: {:error, "Tenant name must be a string; received: #{inspect(name)}"}
+  def create(name),
+    do:
+      {:error,
+       "Tenant name must be a string, and greater than 2 characters; received: #{inspect(name)}"}
 
   @doc """
   Retrieves a tenant from ChromaDB.
