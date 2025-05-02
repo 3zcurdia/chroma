@@ -34,7 +34,6 @@ defmodule Chroma.Collection do
           metadata: map() | nil
         }
 
-  @spec query(Chroma.Collection.t(), keyword()) :: {:error, any()} | {:ok, any()}
   @doc """
   It allows to query the database for similar embeddings.
 
@@ -67,11 +66,12 @@ defmodule Chroma.Collection do
       # Expected to call v1 API endpoint
 
   """
+  @spec query(Chroma.Collection.t(), keyword()) :: {:error, any()} | {:ok, any()}
 
-  def query(%Chroma.Collection{tenant: tenant, database: database, id: id}, kargs)
+  def query(%Chroma.Collection{tenant: tenant, database: database, name: name}, kargs)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
+             is_binary(name) and name != "" do
     {n_results, map} =
       kargs
       |> Enum.into(%{})
@@ -87,7 +87,7 @@ defmodule Chroma.Collection do
           |> Map.put(:query_embeddings, query_embeddings)
 
         url =
-          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
+          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/query"
 
         url
         |> Req.post(json: json_payload)
@@ -98,8 +98,8 @@ defmodule Chroma.Collection do
     end
   end
 
-  def query(%Chroma.Collection{id: id}, kargs)
-      when is_binary(id) and id != "" do
+  def query(%Chroma.Collection{name: name}, kargs)
+      when is_binary(name) and name != "" do
     {n_results, map} =
       kargs
       |> Enum.into(%{})
@@ -114,7 +114,7 @@ defmodule Chroma.Collection do
           |> Map.put(:n_results, n_results)
           |> Map.put(:query_embeddings, query_embeddings)
 
-        url = "#{Chroma.api_url()}/collections/#{id}/query"
+        url = "#{Chroma.api_url()}/collections/#{name}/query"
 
         url
         |> Req.post(json: json_payload)
@@ -135,7 +135,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid first argument for query. Expected Chroma.Collection struct, got: #{inspect(other)}"}
 
-  @spec new(map) :: {:ok, Chroma.Collection.t()} | {:error, String.t()}
   @doc """
   Creates a new `Chroma.Collection` struct from a map of attributes.
 
@@ -189,6 +188,8 @@ defmodule Chroma.Collection do
       {:error, "Input map is missing required keys: \"metadata\"."}
 
   """
+  @spec new(map) :: {:ok, Chroma.Collection.t()} | {:error, String.t()}
+
   def new(attrs) when is_map(attrs) do
     # Extract core fields, using default nil if not present
     id = Map.get(attrs, "id")
@@ -202,7 +203,7 @@ defmodule Chroma.Collection do
     version = Map.get(attrs, "version")
 
     # Basic validation for required fields and types
-    unless is_binary(id) and id != "" do
+    unless is_binary(name) and name != "" do
       {:error, "Input map is missing or has invalid type for required key: \"id\"."}
     end
 
@@ -219,19 +220,12 @@ defmodule Chroma.Collection do
      %Chroma.Collection{
        id: id,
        name: name,
-       # Use the original metadata
        metadata: metadata,
-       # Will be nil if not in attrs
        tenant: tenant,
-       # Will be nil if not in attrs
        database: database,
-       # Will be nil if not in attrs
        configuration_json: configuration_json,
-       # Will be nil if not in attrs
        dimension: dimension,
-       # Will be nil if not in attrs
        log_position: log_position,
-       # Will be nil if not in attrs
        version: version
      }}
   end
@@ -240,8 +234,6 @@ defmodule Chroma.Collection do
     {:error, "Invalid input for Chroma.Collection.new. Expected a map, got: #{inspect(other)}"}
   end
 
-  @spec list() :: {:error, any()} | {:ok, list(Chroma.Collection.t())}
-  @spec list(String.t(), String.t()) :: {:error, any()} | {:ok, list(Chroma.Collection.t())}
   @doc """
   Lists all stored collections in the database.
 
@@ -268,8 +260,9 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid tenant or database provided..."}
 
   """
+  @spec list() :: {:error, any()} | {:ok, list(Chroma.Collection.t())}
+  @spec list(String.t(), String.t()) :: {:error, any()} | {:ok, list(Chroma.Collection.t())}
 
-  # Clause for v1 API: Takes no arguments.
   def list do
     "#{Chroma.api_url()}/collections"
     |> Req.get()
@@ -283,18 +276,14 @@ defmodule Chroma.Collection do
 
     url
     |> Req.get()
-    # Assuming handle_response_list/1 is defined elsewhere
     |> handle_response_list()
   end
 
-  # Catch-all clause for list/2 with invalid tenant/database inputs.
   def list(tenant, database),
     do:
       {:error,
        "Invalid tenant or database provided for listing collections. Expected non-empty strings, got: tenant=#{inspect(tenant)}, database=#{inspect(database)}"}
 
-  @spec get(String.t()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
-  @spec get(String.t(), String.t(), String.t()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
   @doc """
   Gets a single collection by name (v1 API) or by tenant, database, and ID (v2 API).
 
@@ -335,6 +324,9 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid tenant, database, or ID..."}
 
   """
+  @spec get(String.t()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec get(String.t(), String.t(), String.t()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+
   def get(name) when is_binary(name) and name != "" do
     "#{Chroma.api_url()}/collections/#{name}"
     |> Req.get()
@@ -347,11 +339,11 @@ defmodule Chroma.Collection do
      "Invalid collection name provided for get/1. Expected a non-empty string, got: #{inspect(name)}"}
   end
 
-  def get(tenant, database, id)
+  def get(tenant, database, name)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
+             is_binary(name) and name != "" do
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}"
 
     url
     |> Req.get()
@@ -363,9 +355,6 @@ defmodule Chroma.Collection do
      "Invalid tenant, database, or ID provided for get/3. Expected non-empty strings, got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, id=#{inspect(id)}"}
   end
 
-  @spec create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
-  @spec create(String.t(), String.t(), String.t(), map() | nil) ::
-          {:error, any()} | {:ok, Chroma.Collection.t()}
   @doc """
   Creates a new collection in the database.
 
@@ -410,6 +399,9 @@ defmodule Chroma.Collection do
 
   """
 
+  @spec create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec create(String.t(), String.t(), String.t(), map() | nil) ::
+          {:error, any()} | {:ok, Chroma.Collection.t()}
   def create(tenant, database, name, metadata \\ nil)
 
   def create(tenant, database, name, metadata)
@@ -453,9 +445,6 @@ defmodule Chroma.Collection do
      "Invalid collection name or metadata provided for create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
   end
 
-  @spec get_or_create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
-  @spec get_or_create(String.t(), String.t(), String.t(), map() | nil) ::
-          {:error, any()} | {:ok, Chroma.Collection.t()}
   @doc """
   Gets or creates a collection in the database.
 
@@ -499,6 +488,9 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid collection name..."}
 
   """
+  @spec get_or_create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
+  @spec get_or_create(String.t(), String.t(), String.t(), map() | nil) ::
+          {:error, any()} | {:ok, Chroma.Collection.t()}
 
   def get_or_create(tenant, database, name, metadata \\ nil)
 
@@ -538,7 +530,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid collection name or metadata provided for get_or_create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
 
-  @spec add(Chroma.Collection.t(), map()) :: any()
   @doc """
   Adds a batch of embeddings, documents, and/or metadata to a collection.
 
@@ -589,22 +580,23 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid Chroma.Collection struct..."}
 
   """
+  @spec add(Chroma.Collection.t(), map()) :: any()
 
-  def add(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
+  def add(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = data)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
+             is_binary(name) and name != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/add"
 
     url
     |> Req.post(json: data)
     |> handle_json_response!()
   end
 
-  def add(%Chroma.Collection{id: id}, %{} = data)
-      when is_binary(id) and id != "" do
-    url = "#{Chroma.api_url()}/collections/#{id}/add"
+  def add(%Chroma.Collection{name: name}, %{} = data)
+      when is_binary(name) and name != "" do
+    url = "#{Chroma.api_url()}/collections/#{name}/add"
 
     url
     |> Req.post(json: data)
@@ -621,8 +613,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid first argument for add. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
 
-  # Assuming handle_json_response returns {:ok, body} or {:error, reason}
-  @spec update(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
   @doc """
   Updates a batch of embeddings, documents, and/or metadata in a collection.
 
@@ -672,24 +662,25 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid Chroma.Collection struct..."}
 
   """
+  @spec update(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
 
-  def update(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
+  def update(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = data)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
+             is_binary(name) and name != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/update"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/update"
 
     url
     |> Req.post(json: data)
     |> handle_json_response()
   end
 
-  def update(%Chroma.Collection{id: id}, %{} = data)
-      when is_binary(id) and id != "" do
-    IO.puts("Using v1 API for updating data in collection '#{id}'.")
+  def update(%Chroma.Collection{name: name}, %{} = data)
+      when is_binary(name) and name != "" do
+    IO.puts("Using v1 API for updating data in collection '#{name}'.")
 
-    url = "#{Chroma.api_url()}/collections/#{id}/update"
+    url = "#{Chroma.api_url()}/collections/#{name}/update"
 
     url
     |> Req.post(json: data)
@@ -706,7 +697,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid first argument for update. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
 
-  @spec upsert(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
   @doc """
   Upserts a batch of embeddings, documents, and/or metadata in a collection.
 
@@ -758,22 +748,24 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid Chroma.Collection struct..."}
 
   """
-  def upsert(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
+  @spec upsert(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
+
+  def upsert(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = data)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
+             is_binary(name) and name != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/upsert"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/upsert"
 
     url
     |> Req.post(json: data)
     |> handle_json_response()
   end
 
-  def upsert(%Chroma.Collection{id: id}, %{} = data)
-      when is_binary(id) and id != "" do
-    IO.puts("Using v1 API for upserting data in collection '#{id}'.")
-    url = "#{Chroma.api_url()}/collections/#{id}/upsert"
+  def upsert(%Chroma.Collection{name: name}, %{} = data)
+      when is_binary(name) and name != "" do
+    IO.puts("Using v1 API for upserting data in collection '#{name}'.")
+    url = "#{Chroma.api_url()}/collections/#{name}/upsert"
 
     url
     |> Req.post(json: data)
@@ -790,8 +782,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid first argument for upsert. Expected Chroma.Collection struct, got: #{inspect(other)}. Data: #{inspect(data)}"}
 
-  @spec modify(Chroma.Collection.t(), maybe_improper_list | map()) ::
-          {:error, any()} | {:ok, any()}
   @doc """
   Updates the name and/or metadata of a collection.
 
@@ -839,6 +829,8 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid data map or keyword list..."}
 
   """
+  @spec modify(Chroma.Collection.t(), maybe_improper_list | map()) ::
+          {:error, any()} | {:ok, any()}
 
   def modify(%Chroma.Collection{} = collection, kwargs) when is_list(kwargs) do
     args =
@@ -848,10 +840,10 @@ defmodule Chroma.Collection do
     modify(collection, args)
   end
 
-  def modify(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = args)
+  def modify(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = args)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
+             is_binary(name) and name != "" do
     json =
       %{new_name: args[:new_name], new_metadata: args[:new_metadata]}
       |> Map.filter(fn {_, v} -> v != nil and v != %{} and v != [] end)
@@ -859,7 +851,7 @@ defmodule Chroma.Collection do
     if map_size(json) == 0 do
       {:error, "No valid update fields (:new_name or :new_metadata) provided in the data map."}
     else
-      url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
+      url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}"
 
       url
       |> Req.put(json: json)
@@ -867,8 +859,8 @@ defmodule Chroma.Collection do
     end
   end
 
-  def modify(%Chroma.Collection{id: id}, %{} = args)
-      when is_binary(id) and id != "" do
+  def modify(%Chroma.Collection{name: name}, %{} = args)
+      when is_binary(name) and name != "" do
     json =
       %{new_name: args[:new_name], new_metadata: args[:new_metadata]}
       |> Map.filter(fn {_, v} -> v != nil and v != %{} and v != [] end)
@@ -876,7 +868,7 @@ defmodule Chroma.Collection do
     if map_size(json) == 0 do
       {:error, "No valid update fields (:new_name or :new_metadata) provided in the data map."}
     else
-      url = "#{Chroma.api_url()}/collections/#{id}"
+      url = "#{Chroma.api_url()}/collections/#{name}"
 
       url
       |> Req.put(json: json)
@@ -894,7 +886,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid arguments for modify. Expected Chroma.Collection struct and a map or keyword list. Got: collection=#{inspect(other)}, data=#{inspect(data)}"}
 
-  @spec delete(Chroma.Collection.t()) :: any()
   @doc """
   Deletes a collection.
 
@@ -929,6 +920,7 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid Chroma.Collection struct..."}
 
   """
+  @spec delete(Chroma.Collection.t()) :: any()
 
   def delete(%Chroma.Collection{tenant: tenant, database: database, name: name})
       when is_binary(tenant) and tenant != "" and
@@ -960,7 +952,6 @@ defmodule Chroma.Collection do
       {:error,
        "Invalid first argument for delete. Expected Chroma.Collection struct, got: #{inspect(other)}"}
 
-  @spec count(Chroma.Collection.t()) :: any()
   @doc """
   Counts the number of items in a collection.
 
@@ -996,21 +987,23 @@ defmodule Chroma.Collection do
       # Expected to return {:error, "Invalid Chroma.Collection struct..."}
 
   """
-  def count(%Chroma.Collection{tenant: tenant, database: database, id: id})
+  @spec count(Chroma.Collection.t()) :: any()
+
+  def count(%Chroma.Collection{tenant: tenant, database: database, name: name})
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
+             is_binary(name) and name != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/count"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/count"
 
     url
     |> Req.get()
     |> handle_json_response()
   end
 
-  def count(%Chroma.Collection{id: id})
-      when is_binary(id) and id != "" do
-    url = "#{Chroma.api_url()}/collections/#{id}/count"
+  def count(%Chroma.Collection{name: name})
+      when is_binary(name) and name != "" do
+    url = "#{Chroma.api_url()}/collections/#{name}/count"
 
     url
     |> Req.get()
