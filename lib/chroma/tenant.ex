@@ -97,7 +97,7 @@ defmodule Chroma.Tenant do
       {:ok, %{}}
     else
       case body do
-        %{"name" => _name} -> {new(body)}
+        %{"name" => _name} -> new(body)
         _ -> {:error, "Unexpected response format: #{inspect(body)}"}
       end
     end
