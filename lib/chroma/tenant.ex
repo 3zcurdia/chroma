@@ -97,7 +97,7 @@ defmodule Chroma.Tenant do
       {:ok, %{}}
     else
       case body do
-        %{"name" => _name} -> {:ok, new(body)}
+        %{"name" => _name} -> {new(body)}
         _ -> {:error, "Unexpected response format: #{inspect(body)}"}
       end
     end
@@ -109,7 +109,17 @@ defmodule Chroma.Tenant do
   end
 
   defp handle_response({:ok, %Req.Response{status: status, body: body}})
-       when status > 499 do
+       when status == 404 do
+    {:error, "Not Found: #{inspect(body)}"}
+  end
+
+  defp handle_response({:ok, %Req.Response{status: status, body: body}})
+       when status == 409 do
+    {:error, "Conflict: #{inspect(body)}"}
+  end
+
+  defp handle_response({:ok, %Req.Response{status: status, body: body}})
+       when status in 500..599 do
     {:error, "Server error: #{inspect(body)}"}
   end
 end
