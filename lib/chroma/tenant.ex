@@ -51,7 +51,7 @@ defmodule Chroma.Tenant do
   """
 
   @spec create(String.t()) :: {:ok, %{}} | {:error, String.t()}
-  def create(name) when is_binary(name) and length(name) > 2 do
+  def create(name) when is_binary(name) and byte_size(name) > 2 do
     url = "#{Chroma.api_url()}/tenants"
     json = %{name: name}
 
