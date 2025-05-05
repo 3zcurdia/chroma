@@ -53,7 +53,7 @@ defmodule Chroma.Database do
   """
   @spec create(String.t(), String.t()) :: {:ok, %{}} | {:error, String.t()}
 
-  def create(name, tenant)
+  def create(tenant, name)
       when is_binary(name) and byte_size(name) > 2 and
              is_binary(tenant) and byte_size(tenant) > 2 do
     url = "#{Chroma.api_url()}/tenants/#{tenant}/databases"
@@ -63,7 +63,7 @@ defmodule Chroma.Database do
     |> handle_response()
   end
 
-  def create(name, tenant) do
+  def create(tenant, name) do
     {:error,
      "Database name and tenant must be strings, and greater than 2 characters; received: #{inspect(name)}, #{inspect(tenant)}"}
   end
@@ -88,7 +88,7 @@ defmodule Chroma.Database do
   """
   @spec get(String.t(), String.t()) :: {:ok, t()} | {:error, String.t()}
 
-  def get(name, tenant)
+  def get(tenant, name)
       when is_binary(name) and byte_size(name) > 2 and
              is_binary(tenant) and byte_size(tenant) > 2 do
     url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{name}"
@@ -97,7 +97,7 @@ defmodule Chroma.Database do
     |> handle_response()
   end
 
-  def get(name, tenant) do
+  def get(tenant, name) do
     {:error,
      "Database name and tenant must be strings, and greater than 2 characters; received: #{inspect(name)}, #{inspect(tenant)}"}
   end
@@ -122,7 +122,7 @@ defmodule Chroma.Database do
   """
   @spec delete(String.t(), String.t()) :: {:ok, %{}} | {:error, String.t()}
 
-  def delete(name, tenant)
+  def delete(tenant, name)
       when is_binary(name) and byte_size(name) > 2 and
              is_binary(tenant) and byte_size(tenant) > 2 do
     url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{name}"
@@ -131,7 +131,7 @@ defmodule Chroma.Database do
     |> handle_response()
   end
 
-  def delete(name, tenant) do
+  def delete(tenant, name) do
     {:error,
      "Database name and tenant must be strings, and greater than 2 characters; received: #{inspect(name)}, #{inspect(tenant)}"}
   end
