@@ -31,7 +31,13 @@ defmodule Chroma.Util do
   Pre-flight checks endpoint reporting basic readiness info.
   """
   @spec preflight :: {:ok, map()} | {:error, any}
-  def preflight, do: Req.get(Chroma.api_url() <> "/pre-flight-check") |> handle_response()
+  def preflight, do: Req.get(Chroma.api_url() <> "/pre-flight-checks") |> handle_response()
+
+  @doc """
+  Returns the version of the server.
+  """
+  @spec version :: {:ok, String.t()} | {:error, any}
+  def version, do: Req.get(Chroma.api_url() <> "/version") |> handle_response()
 
   defp handle_response({:ok, %Req.Response{status: status, body: body}}) do
     case status do
