@@ -4,22 +4,16 @@ defmodule Chroma.Util do
   """
 
   @doc """
-  Returns the current vesion of the Chroma database.
-  """
-  @spec version :: String.t()
-  def version, do: Req.get!(Chroma.api_url() <> "/version").body
-
-  @doc """
   Resets the database to its initial state.
   """
   @spec reset :: {:ok, map()} | {:error, any}
   def reset, do: Req.post(Chroma.api_url() <> "/reset") |> handle_response()
 
   @doc """
-  Persists the database to disk.
+  Returns the current authenticated user's identity.
   """
-  @spec persist :: {:ok, map()} | {:error, any}
-  def persist, do: Req.post(Chroma.api_url() <> "/persist") |> handle_response()
+  @spec auth_identity :: {:ok, map()} | {:error, any}
+  def auth_identity, do: Req.get(Chroma.api_url() <> "/auth/identity") |> handle_response()
 
   @doc """
   Returns the current state of the database.
@@ -27,10 +21,22 @@ defmodule Chroma.Util do
   @spec heartbeat :: {:ok, map()} | {:error, any}
   def heartbeat, do: Req.get(Chroma.api_url() <> "/heartbeat") |> handle_response()
 
+  @doc """
+  Health check endpoint that returns 200 if the server and executor are ready
+  """
+  @spec healthcheck :: {:ok, map()} | {:error, any}
+  def healthcheck, do: Req.get(Chroma.api_url() <> "/healthcheck") |> handle_response()
+
+  @doc """
+  Pre-flight checks endpoint reporting basic readiness info.
+  """
+  @spec preflight :: {:ok, map()} | {:error, any}
+  def preflight, do: Req.get(Chroma.api_url() <> "/pre-flight-check") |> handle_response()
+
   defp handle_response({:ok, %Req.Response{status: status, body: body}}) do
     case status do
       code when code in 200..299 -> {:ok, body}
-      _ -> {:error, body["error"]}
+      _ -> {:error, body}
     end
   end
 
