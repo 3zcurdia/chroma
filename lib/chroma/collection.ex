@@ -318,7 +318,6 @@ defmodule Chroma.Collection do
       iex> # Invalid v1 call
       iex> # Chroma.Collection.get("")
       # Expected to return {:error, "Invalid collection name..."}
-
       iex> # Invalid v2 call
       iex> # Chroma.Collection.get("t", "", "i")
       # Expected to return {:error, "Invalid tenant, database, or ID..."}
@@ -330,7 +329,6 @@ defmodule Chroma.Collection do
   def get(name) when is_binary(name) and name != "" do
     "#{Chroma.api_url()}/collections/#{name}"
     |> Req.get()
-    # Assuming handle_response/1 is defined elsewhere
     |> handle_response()
   end
 
