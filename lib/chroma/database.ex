@@ -103,6 +103,40 @@ defmodule Chroma.Database do
   end
 
   @doc """
+  Deletes a database from ChromaDB.
+  ## Parameters
+  - `name`: The name of the database to be deleted.
+  - `tenant`: The tenant to which the database belongs.
+  ## Returns
+  - `{:ok, %{}}`: If the database is deleted successfully.
+  - `{:error, reason}`: If there is an error deleting the database.
+  ## Examples
+      iex> Chroma.Database.delete("my_database", "my_tenant")
+      {:ok, %{}}
+
+      iex> Chroma.Database.delete(123, "my_tenant")
+      {:error, "Database name and tenant must be strings, and greater than 2 characters; received: 123, \"my_tenant\""}
+
+      iex> Chroma.Database.delete("my_database", "my_tenant")
+      {:error, "Unauthorized: Invalid API key"}
+  """
+  @spec delete(String.t(), String.t()) :: {:ok, %{}} | {:error, String.t()}
+
+  def delete(name, tenant)
+      when is_binary(name) and byte_size(name) > 2 and
+             is_binary(tenant) and byte_size(tenant) > 2 do
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{name}"
+
+    Req.delete(url)
+    |> handle_response()
+  end
+
+  def delete(name, tenant) do
+    {:error,
+     "Database name and tenant must be strings, and greater than 2 characters; received: #{inspect(name)}, #{inspect(tenant)}"}
+  end
+
+  @doc """
   Lists all databases for a given tenant in ChromaDB.
   ## Parameters
   - `tenant`: The tenant for which to list databases.
