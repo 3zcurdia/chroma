@@ -1062,7 +1062,13 @@ defmodule Chroma.Collection do
 
       _ ->
         error_reason =
-          if is_map(body) and Map.has_key?(body, "error"), do: body["error"], else: body
+          cond do
+            is_map(body) and Map.has_key?(body, "error") and Map.has_key?(body, "message") ->
+              "#{body["error"]}: #{body["message"]}"
+
+            is_map(body) and Map.has_key?(body, "error") ->
+              body["error"]
+          end
 
         {:error, error_reason}
     end
