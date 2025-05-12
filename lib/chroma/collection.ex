@@ -68,10 +68,10 @@ defmodule Chroma.Collection do
   """
   @spec query(Chroma.Collection.t(), keyword()) :: {:error, any()} | {:ok, any()}
 
-  def query(%Chroma.Collection{tenant: tenant, database: database, name: name}, kargs)
+  def query(%Chroma.Collection{tenant: tenant, database: database, id: id}, kargs)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     {n_results, map} =
       kargs
       |> Enum.into(%{})
@@ -87,7 +87,7 @@ defmodule Chroma.Collection do
           |> Map.put(:query_embeddings, query_embeddings)
 
         url =
-          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/query"
+          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
 
         url
         |> Req.post(json: json_payload)
@@ -662,12 +662,12 @@ defmodule Chroma.Collection do
   """
   @spec update(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
 
-  def update(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = data)
+  def update(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/update"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/update"
 
     url
     |> Req.post(json: data)
@@ -748,12 +748,12 @@ defmodule Chroma.Collection do
   """
   @spec upsert(Chroma.Collection.t(), map()) :: {:error, any()} | {:ok, any()}
 
-  def upsert(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = data)
+  def upsert(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/upsert"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/upsert"
 
     url
     |> Req.post(json: data)
@@ -838,10 +838,10 @@ defmodule Chroma.Collection do
     modify(collection, args)
   end
 
-  def modify(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = args)
+  def modify(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = args)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     json =
       %{new_name: args[:new_name], new_metadata: args[:new_metadata]}
       |> Map.filter(fn {_, v} -> v != nil and v != %{} and v != [] end)
@@ -849,7 +849,7 @@ defmodule Chroma.Collection do
     if map_size(json) == 0 do
       {:error, "No valid update fields (:new_name or :new_metadata) provided in the data map."}
     else
-      url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}"
+      url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
       url
       |> Req.put(json: json)
@@ -920,11 +920,11 @@ defmodule Chroma.Collection do
   """
   @spec delete(Chroma.Collection.t()) :: any()
 
-  def delete(%Chroma.Collection{tenant: tenant, database: database, name: name})
+  def delete(%Chroma.Collection{tenant: tenant, database: database, id: id})
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}"
+             is_binary(id) and id != "" do
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
 
     url
     |> Req.delete()
@@ -987,12 +987,12 @@ defmodule Chroma.Collection do
   """
   @spec count(Chroma.Collection.t()) :: any()
 
-  def count(%Chroma.Collection{tenant: tenant, database: database, name: name})
+  def count(%Chroma.Collection{tenant: tenant, database: database, id: id})
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/count"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/count"
 
     url
     |> Req.get()
