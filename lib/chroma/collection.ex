@@ -1068,6 +1068,9 @@ defmodule Chroma.Collection do
 
             is_map(body) and Map.has_key?(body, "error") ->
               body["error"]
+
+            true ->
+              "Unexpected error format: #{inspect(body)}"
           end
 
         {:error, error_reason}
