@@ -580,12 +580,12 @@ defmodule Chroma.Collection do
   """
   @spec add(Chroma.Collection.t(), map()) :: any()
 
-  def add(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = data)
+  def add(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/add"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
 
     url
     |> Req.post(json: data)
