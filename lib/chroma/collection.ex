@@ -1062,7 +1062,7 @@ defmodule Chroma.Collection do
 
       _ ->
         error_reason =
-          if is_map(body) and Map.has_key?(body, "error"), do: body["error"], else: body
+          if is_map(body) and Map.has_key?(body, "error"), do: body, else: body
 
         {:error, error_reason}
     end
