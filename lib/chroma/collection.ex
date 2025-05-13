@@ -68,10 +68,10 @@ defmodule Chroma.Collection do
   """
   @spec query(Chroma.Collection.t(), keyword()) :: {:error, any()} | {:ok, any()}
 
-  def query(%Chroma.Collection{tenant: tenant, database: database, name: name}, kargs)
+  def query(%Chroma.Collection{tenant: tenant, database: database, id: id}, kargs)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     {n_results, map} =
       kargs
       |> Enum.into(%{})
@@ -87,7 +87,7 @@ defmodule Chroma.Collection do
           |> Map.put(:query_embeddings, query_embeddings)
 
         url =
-          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/query"
+          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
 
         url
         |> Req.post(json: json_payload)
