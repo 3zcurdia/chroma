@@ -1085,7 +1085,7 @@ defmodule Chroma.Collection do
   defp handle_json_response!(any) do
     case handle_json_response(any) do
       {:ok, body} -> body
-      {:error, reason} -> raise "Chroma API Error: #{inspect(reason)}"
+      {:error, reason} -> raise "Chroma API Error: #{inspect(reason)}, #{inspect(any)}"
     end
   end
 end
