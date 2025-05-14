@@ -923,11 +923,11 @@ defmodule Chroma.Collection do
   """
   @spec delete(Chroma.Collection.t()) :: any()
 
-  def delete(%Chroma.Collection{tenant: tenant, database: database, id: id})
+  def delete(%Chroma.Collection{tenant: tenant, database: database, name: name})
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(id) and id != "" do
-    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}"
+             is_binary(name) and name != "" do
+    url = "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}"
 
     url
     |> Req.delete()
