@@ -68,10 +68,10 @@ defmodule Chroma.Collection do
   """
   @spec query(Chroma.Collection.t(), keyword()) :: {:error, any()} | {:ok, any()}
 
-  def query(%Chroma.Collection{tenant: tenant, database: database, name: name}, kargs)
+  def query(%Chroma.Collection{tenant: tenant, database: database, id: id}, kargs)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     {n_results, map} =
       kargs
       |> Enum.into(%{})
@@ -87,7 +87,7 @@ defmodule Chroma.Collection do
           |> Map.put(:query_embeddings, query_embeddings)
 
         url =
-          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/query"
+          "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/query"
 
         url
         |> Req.post(json: json_payload)
@@ -580,12 +580,12 @@ defmodule Chroma.Collection do
   """
   @spec add(Chroma.Collection.t(), map()) :: any()
 
-  def add(%Chroma.Collection{tenant: tenant, database: database, name: name}, %{} = data)
+  def add(%Chroma.Collection{tenant: tenant, database: database, id: id}, %{} = data)
       when is_binary(tenant) and tenant != "" and
              is_binary(database) and database != "" and
-             is_binary(name) and name != "" do
+             is_binary(id) and id != "" do
     url =
-      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{name}/add"
+      "#{Chroma.api_url()}/tenants/#{tenant}/databases/#{database}/collections/#{id}/add"
 
     url
     |> Req.post(json: data)
@@ -1085,7 +1085,7 @@ defmodule Chroma.Collection do
   defp handle_json_response!(any) do
     case handle_json_response(any) do
       {:ok, body} -> body
-      {:error, reason} -> raise "Chroma API Error: #{inspect(reason)}"
+      {:error, reason} -> raise "Chroma API Error: #{inspect(reason)}, #{inspect(any)}"
     end
   end
 end
