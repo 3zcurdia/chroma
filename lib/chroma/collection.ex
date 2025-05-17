@@ -359,9 +359,9 @@ defmodule Chroma.Collection do
   This function supports both v1 and v2 API endpoints.
 
   - Calling `create(name, metadata \\ %{})` will use the v1 API endpoint,
-    creating a collection with the given name, metadata and optional configuration.
+    creating a collection with the given name and metadata.
   - Calling `create(tenant, database, name, metadata \\ %{}, configuration \\ nil)` will use the v2 API endpoint,
-    creating a collection within the specified tenant and database with the given name, metadata and optional configuration.
+    creating a collection within the specified tenant and database with the given name, metadata and configuration.
 
   ## Parameters
 
@@ -398,7 +398,7 @@ defmodule Chroma.Collection do
 
   """
 
-  @spec create(String.t(), map()) :: {:error, any()} | {:ok, t()}
+  @spec create(String.t(), map()) :: {:error, any()} | {:ok, Chroma.Collection.t()}
   @spec create(String.t(), String.t(), String.t(), map() | nil, map() | nil) ::
           {:error, any()} | {:ok, Chroma.Collection.t()}
   def create(tenant, database, name, metadata \\ nil, configuration \\ nil)
@@ -422,14 +422,13 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
-  def create(tenant, database, name, metadata, _configuration) do
+  def create(tenant, database, name, metadata, configuration) do
     {:error,
-     "Invalid tenant, database, name, or metadata provided for create/5. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
+     "Invalid tenant, database, name, or metadata provided for create/5. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}, configuration=#{inspect(configuration)}"}
   end
 
   def create(name, metadata)
-      when is_binary(name) and name != "" and
-             is_map(metadata) do
+      when is_binary(name) and name != "" do
     IO.puts("Using v1 API for creating collection '#{name}'.")
     json = %{name: name, metadata: metadata, get_or_create: false}
     url = "#{Chroma.api_url()}/collections"
@@ -441,7 +440,7 @@ defmodule Chroma.Collection do
 
   def create(name, metadata) do
     {:error,
-     "Invalid collection name or metadata provided for create/3. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
+     "Invalid collection name or metadata provided for create/2. Expected name as non-empty string, metadata as map. Got: name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
   end
 
   @doc """
@@ -491,7 +490,7 @@ defmodule Chroma.Collection do
   @spec get_or_create(String.t(), String.t(), String.t(), map() | nil, map() | nil) ::
           {:error, any()} | {:ok, Chroma.Collection.t()}
   @spec get_or_create(String.t(), map() | nil) ::
-          {:error, any()} | {:ok, t()}
+          {:error, any()} | {:ok, Chroma.Collection.t()}
 
   def get_or_create(tenant, database, name, metadata \\ nil, configuration \\ nil)
 
@@ -509,10 +508,10 @@ defmodule Chroma.Collection do
     |> handle_response()
   end
 
-  def get_or_create(tenant, database, name, metadata, _configuration),
+  def get_or_create(tenant, database, name, metadata, configuration),
     do:
       {:error,
-       "Invalid tenant, database, name, or metadata provided for get_or_create/5. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}"}
+       "Invalid tenant, database, name, or metadata provided for get_or_create/5. Expected tenant, database, name as non-empty strings, metadata as map. Got: tenant=#{inspect(tenant)}, database=#{inspect(database)}, name=#{inspect(name)}, metadata=#{inspect(metadata)}, configuration=#{inspect(configuration)}"}
 
   def get_or_create(name, metadata \\ %{})
 
