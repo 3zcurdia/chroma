@@ -23,10 +23,10 @@ In your config file you can setup the following:
 config :chroma, 
   host: "http://localhost:8000",
   api_base: "api",
-  api_version: "v1"
+  api_version: "v2"
 ```
 
-By default the config is set to `api/v1`
+By default the config is set to `api/v2`
 
 ## Usage
 

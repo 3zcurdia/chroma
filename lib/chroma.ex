@@ -38,7 +38,7 @@ defmodule Chroma do
   def api_version do
     case Application.fetch_env(:chroma, :api_version) do
       {:ok, api_version} -> api_version
-      _ -> "v1"
+      _ -> "v2"
     end
   end
 end
