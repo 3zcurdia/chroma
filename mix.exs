@@ -28,7 +28,7 @@ defmodule Chroma.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:req, "~> 0.6.1"},
+      {:req, "~> 0.7.2"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.40.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.8", only: :test}
